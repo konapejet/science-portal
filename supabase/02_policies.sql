@@ -1,0 +1,365 @@
+-- =========================================================
+-- 02_policies.sql — RLS (행 수준 보안)
+-- 학생(anon)은 테이블에 직접 접근할 수 없다. 학생 기능은 03의 함수로만.
+-- 교사(teachers에 등록된 계정)만 모든 테이블을 읽고 쓴다.
+-- =========================================================
+
+-- 지금 로그인한 사람이 교사인지
+create or replace function public.is_teacher()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.teachers where user_id = auth.uid());
+$$;
+revoke all on function public.is_teacher() from public, anon;
+grant execute on function public.is_teacher() to authenticated;
+
+alter table public.teachers enable row level security;
+alter table public.classes  enable row level security;
+alter table public.boards   enable row level security;
+alter table public.settings enable row level security;
+
+-- anon에는 테이블 권한 자체를 주지 않는다
+revoke all on public.teachers, public.classes, public.boards, public.settings from anon;
+
+-- teachers: 자기 행만 읽기 (등록은 SQL Editor에서만)
+drop policy if exists teachers_self_read on public.teachers;
+create policy teachers_self_read on public.teachers
+  for select to authenticated
+  using (user_id = auth.uid());
+
+-- classes / boards / settings: 교사만 전부
+drop policy if exists classes_teacher_all on public.classes;
+create policy classes_teacher_all on public.classes
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists boards_teacher_all on public.boards;
+create policy boards_teacher_all on public.boards
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists settings_teacher_all on public.settings;
+create policy settings_teacher_all on public.settings
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- ---------------------------------------------------------
+-- 2단계: 명단, 제출, 포인트, 피드백 버튼, 코드 시도 기록
+-- ---------------------------------------------------------
+alter table public.students         enable row level security;
+alter table public.submissions      enable row level security;
+alter table public.point_events     enable row level security;
+alter table public.feedback_presets enable row level security;
+alter table public.code_attempts    enable row level security;
+
+revoke all on public.students, public.submissions, public.point_events,
+              public.feedback_presets, public.code_attempts from anon;
+
+drop policy if exists students_teacher_all on public.students;
+create policy students_teacher_all on public.students
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 학생 코드: 교사만 (anon·학생 함수는 못 읽음)
+alter table public.student_codes enable row level security;
+revoke all on public.student_codes from anon;
+drop policy if exists student_codes_teacher_all on public.student_codes;
+create policy student_codes_teacher_all on public.student_codes
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists submissions_teacher_all on public.submissions;
+create policy submissions_teacher_all on public.submissions
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists point_events_teacher_all on public.point_events;
+create policy point_events_teacher_all on public.point_events
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists feedback_presets_teacher_all on public.feedback_presets;
+create policy feedback_presets_teacher_all on public.feedback_presets
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists code_attempts_teacher_all on public.code_attempts;
+create policy code_attempts_teacher_all on public.code_attempts
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 모둠 편성 (보드마다)
+alter table public.board_groups enable row level security;
+revoke all on public.board_groups from anon;
+
+drop policy if exists board_groups_teacher_all on public.board_groups;
+create policy board_groups_teacher_all on public.board_groups
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- ---------------------------------------------------------
+-- 3단계: 캐릭터 부품, 순위 스냅샷
+-- ---------------------------------------------------------
+alter table public.avatar_items   enable row level security;
+alter table public.rank_snapshots enable row level security;
+revoke all on public.avatar_items, public.rank_snapshots from anon;
+
+drop policy if exists avatar_items_teacher_all on public.avatar_items;
+create policy avatar_items_teacher_all on public.avatar_items
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists rank_snapshots_teacher_all on public.rank_snapshots;
+create policy rank_snapshots_teacher_all on public.rank_snapshots
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 학생 출입증 (학생은 03의 함수로만)
+alter table public.student_sessions enable row level security;
+revoke all on public.student_sessions from anon;
+
+drop policy if exists student_sessions_teacher_all on public.student_sessions;
+create policy student_sessions_teacher_all on public.student_sessions
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- ---------------------------------------------------------
+-- 4단계: 포인트 상점 (학생은 03의 함수로만)
+-- ---------------------------------------------------------
+alter table public.student_items enable row level security;
+alter table public.shop_items    enable row level security;
+alter table public.purchases     enable row level security;
+revoke all on public.student_items, public.shop_items, public.purchases from anon;
+
+drop policy if exists student_items_teacher_all on public.student_items;
+create policy student_items_teacher_all on public.student_items
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists shop_items_teacher_all on public.shop_items;
+create policy shop_items_teacher_all on public.shop_items
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists purchases_teacher_all on public.purchases;
+create policy purchases_teacher_all on public.purchases
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- ---------------------------------------------------------
+-- 5단계: 수업자료 (교사만. 학생 함수에도 내보내지 않는다)
+-- ---------------------------------------------------------
+alter table public.lessons enable row level security;
+revoke all on public.lessons from anon;
+
+drop policy if exists lessons_teacher_all on public.lessons;
+create policy lessons_teacher_all on public.lessons
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- ---------------------------------------------------------
+-- 8단계: 학습지 (교사만. 학생은 03의 함수로만, 정답(key)은 학생에게 내보내지 않는다)
+-- ---------------------------------------------------------
+alter table public.worksheets        enable row level security;
+alter table public.worksheet_answers enable row level security;
+revoke all on public.worksheets, public.worksheet_answers from anon;
+
+drop policy if exists worksheets_teacher_all on public.worksheets;
+create policy worksheets_teacher_all on public.worksheets
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists worksheet_answers_teacher_all on public.worksheet_answers;
+create policy worksheet_answers_teacher_all on public.worksheet_answers
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 쪽별 첫 답 (2026-10-16): 학생은 submit_worksheet_page로만 들어간다
+alter table public.ws_firsts enable row level security;
+revoke all on public.ws_firsts from anon;
+
+drop policy if exists ws_firsts_teacher_all on public.ws_firsts;
+create policy ws_firsts_teacher_all on public.ws_firsts
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 게임형 쪽 스테이지 기록 (2026-11-14): 학생은 submit_worksheet_stage로만 들어간다
+alter table public.ws_stage_tries enable row level security;
+revoke all on public.ws_stage_tries from anon;
+
+drop policy if exists ws_stage_tries_teacher_all on public.ws_stage_tries;
+create policy ws_stage_tries_teacher_all on public.ws_stage_tries
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+alter table public.ws_page_open enable row level security;
+revoke all on public.ws_page_open from anon;
+
+drop policy if exists ws_page_open_teacher_all on public.ws_page_open;
+create policy ws_page_open_teacher_all on public.ws_page_open
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 퀴즈 배틀 (2026-10-16): 학생은 qb_* 함수로만
+alter table public.qb_games enable row level security;
+alter table public.qb_players enable row level security;
+alter table public.qb_answers enable row level security;
+revoke all on public.qb_games from anon;
+revoke all on public.qb_players from anon;
+revoke all on public.qb_answers from anon;
+
+drop policy if exists qb_games_teacher_all on public.qb_games;
+create policy qb_games_teacher_all on public.qb_games
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists qb_players_teacher_all on public.qb_players;
+create policy qb_players_teacher_all on public.qb_players
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists qb_answers_teacher_all on public.qb_answers;
+create policy qb_answers_teacher_all on public.qb_answers
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 모둠 칸 게시판 (2026-10-19): 학생은 post_* 함수로만. 사진 버킷 정책은 03 끝(_post_upload_ok 뒤)
+alter table public.posts enable row level security;
+alter table public.post_uploads enable row level security;
+revoke all on public.posts from anon;
+revoke all on public.post_uploads from anon;
+
+drop policy if exists posts_teacher_all on public.posts;
+create policy posts_teacher_all on public.posts
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists post_uploads_teacher_all on public.post_uploads;
+create policy post_uploads_teacher_all on public.post_uploads
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 반 게시판 (2026-10-20): 교사만 표를 읽고 쓴다. 학생은 get_class_materials로 보기만. 버킷 정책은 03 끝
+alter table public.class_sections enable row level security;
+alter table public.class_materials enable row level security;
+revoke all on public.class_sections from anon;
+revoke all on public.class_materials from anon;
+
+drop policy if exists class_sections_teacher_all on public.class_sections;
+create policy class_sections_teacher_all on public.class_sections
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists class_materials_teacher_all on public.class_materials;
+create policy class_materials_teacher_all on public.class_materials
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 진도 관리 (2026-10-20): 교사만
+alter table public.timetable enable row level security;
+alter table public.class_days enable row level security;
+revoke all on public.timetable from anon;
+revoke all on public.class_days from anon;
+
+drop policy if exists timetable_teacher_all on public.timetable;
+create policy timetable_teacher_all on public.timetable
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists class_days_teacher_all on public.class_days;
+create policy class_days_teacher_all on public.class_days
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 퀴즈 쇼 (2026-10-22): 교사만 표를 읽고 쓴다. 학생은 qs_* 함수로만. 버킷 정책은 03 끝
+alter table public.qs_sets enable row level security;
+alter table public.qs_games enable row level security;
+alter table public.qs_players enable row level security;
+alter table public.qs_seen enable row level security;
+alter table public.qs_answers enable row level security;
+revoke all on public.qs_sets from anon;
+revoke all on public.qs_games from anon;
+revoke all on public.qs_players from anon;
+revoke all on public.qs_seen from anon;
+revoke all on public.qs_answers from anon;
+
+drop policy if exists qs_sets_teacher_all on public.qs_sets;
+create policy qs_sets_teacher_all on public.qs_sets
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists qs_games_teacher_all on public.qs_games;
+create policy qs_games_teacher_all on public.qs_games
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists qs_players_teacher_all on public.qs_players;
+create policy qs_players_teacher_all on public.qs_players
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists qs_seen_teacher_all on public.qs_seen;
+create policy qs_seen_teacher_all on public.qs_seen
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists qs_answers_teacher_all on public.qs_answers;
+create policy qs_answers_teacher_all on public.qs_answers
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 학습지 AI 채점 (2026-10-24): 교사만. 학생은 submit_worksheet_page로만, Edge Function은 비밀 표를 받는 ws_ai_* 함수로만
+alter table public.ws_ai_cache enable row level security;
+alter table public.ws_ai_queue enable row level security;
+alter table public.ws_ai_off enable row level security;
+revoke all on public.ws_ai_cache from anon;
+revoke all on public.ws_ai_queue from anon;
+revoke all on public.ws_ai_off from anon;
+
+drop policy if exists ws_ai_cache_teacher_all on public.ws_ai_cache;
+create policy ws_ai_cache_teacher_all on public.ws_ai_cache
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists ws_ai_queue_teacher_all on public.ws_ai_queue;
+create policy ws_ai_queue_teacher_all on public.ws_ai_queue
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+drop policy if exists ws_ai_off_teacher_all on public.ws_ai_off;
+create policy ws_ai_off_teacher_all on public.ws_ai_off
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());
+
+-- 휴대폰 리모컨 (2026-10-27): 비공개 Broadcast 채널 'remote'는 교사만 보내고 받는다.
+-- 공개 채널(class-<반> 등)은 이 정책과 상관없이 그대로
+-- 새 프로젝트는 Realtime이 realtime.messages를 조금 늦게 만든다 → 없으면 건너뛰고, 설치 화면이 생긴 뒤 02를 다시 실행
+do $$
+begin
+  if to_regclass('realtime.messages') is null then
+    raise notice 'realtime.messages 없음: 리모컨 정책은 나중에';
+    return;
+  end if;
+  execute 'drop policy if exists remote_teacher_read on realtime.messages';
+  execute $p$create policy remote_teacher_read on realtime.messages
+    for select to authenticated
+    using (realtime.topic() = 'remote' and public.is_teacher())$p$;
+  execute 'drop policy if exists remote_teacher_send on realtime.messages';
+  execute $p$create policy remote_teacher_send on realtime.messages
+    for insert to authenticated
+    with check (realtime.topic() = 'remote' and public.is_teacher())$p$;
+end
+$$;
+
+-- 딴 화면 기록: 교사만 (학생은 away_mark로만 적는다)
+alter table public.away_log enable row level security;
+revoke all on public.away_log from anon;
+
+drop policy if exists away_log_teacher_all on public.away_log;
+create policy away_log_teacher_all on public.away_log
+  for all to authenticated
+  using (public.is_teacher()) with check (public.is_teacher());

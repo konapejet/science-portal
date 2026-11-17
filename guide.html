@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="assets/img/icon-32.png" sizes="32x32">
+<link rel="icon" href="assets/img/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="assets/img/icon-180.png">
+<meta name="apple-mobile-web-app-title" content="과학">
+<title>과학 수업 사용 안내</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/guide.css">
+</head>
+<body>
+<div class="bar">
+  <b>과학 수업 사용 안내</b>
+  <a class="btn only-scroll" href="index.html">첫 화면</a>
+  <button class="btn dark only-scroll" type="button" id="to-slides">화면으로 보기</button>
+  <button class="btn only-slides" type="button" id="prev" aria-label="앞 장">‹</button>
+  <span class="count only-slides" id="count"></span>
+  <button class="btn only-slides" type="button" id="next" aria-label="다음 장">›</button>
+  <button class="btn only-slides" type="button" id="to-scroll">닫기</button>
+</div>
+
+<main>
+  <section class="g">
+    <div>
+      <h2>처음 가입</h2>
+      <ol>
+        <li>첫 화면 [처음 가입]</li>
+        <li>학번 5자리 (1학년 1반 1번 = 10101)</li>
+        <li>코드 6자리 직접 정하기</li>
+        <li>코드는 공책에 적어 두기</li>
+      </ol>
+    </div>
+    <div class="pic" aria-hidden="true">
+      <span class="lbl">학번 5자리</span>
+      <div class="in">10101</div>
+      <span class="lbl">내가 정할 코드 6자리</span>
+      <div class="in">● ● ● ● ● ●</div>
+      <div class="row"><span class="chip on">가입하기</span></div>
+    </div>
+  </section>
+
+  <section class="g">
+    <div>
+      <h2>바로가기 만들기</h2>
+      <ol>
+        <li>크롬 새 탭 (Ctrl + T)</li>
+        <li>아래 동그라미 [＋ 바로가기 추가]</li>
+        <li>이름: 과학<br>URL: <span class="addr" data-addr></span></li>
+        <li>[완료]</li>
+      </ol>
+      <p style="margin-top:12px">다음부터는 새 탭의 '과학'으로 들어옴</p>
+    </div>
+    <div class="pic newtab" aria-hidden="true">
+      <div class="nt-search">검색어 또는 URL 입력</div>
+      <div class="nt-tiles">
+        <span class="nt-tile"><i>Y</i>유튜브</span>
+        <span class="nt-tile"><i>D</i>드라이브</span>
+        <span class="nt-tile on"><i>＋</i>바로가기 추가</span>
+      </div>
+      <div class="nt-dlg">
+        <b>바로가기 추가</b>
+        <span class="lbl">이름</span>
+        <div class="in nt-in">과학</div>
+        <span class="lbl">URL</span>
+        <div class="in nt-in" data-addr></div>
+        <div class="row" style="justify-content:flex-end"><span class="chip">취소</span><span class="chip on">완료</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="g">
+    <div>
+      <h2>로그인</h2>
+      <ul>
+        <li>반, 번호, 코드 6자리</li>
+        <li>로그아웃 전까지 유지</li>
+        <li>코드 잊으면 선생님께</li>
+      </ul>
+    </div>
+    <div class="pic" aria-hidden="true">
+      <span class="lbl">로그인 뒤 첫 화면</span>
+      <div class="menu">
+        <div class="main">수업<span>오늘 수업</span></div>
+        <div>마이페이지<span>레벨, 기록, 꾸미기</span></div>
+        <div>상점<span>꾸미기, 보상</span></div>
+        <div>순위<span>이번 달</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="g">
+    <div>
+      <h2>수업 순서</h2>
+      <p>보통 이 순서. 날마다 조금씩 다름</p>
+    </div>
+    <ol class="tl" aria-label="수업 순서">
+      <li><b>로그인, [수업]</b><span>개인 학습지 탭</span></li>
+      <li><b>설명 듣기</b><span>학습지가 앞 화면 따라 넘어감. 아직 못 씀</span></li>
+      <li><b>학습지 쓰기</b><span>선생님이 열면 쓰고 [이 쪽 제출]</span></li>
+      <li><b>답 같이 보기</b><span>뽑힌 답을 앞 화면에서</span></li>
+      <li><b>모둠활동</b><span>모둠 게시판에 올리고 [제출]</span></li>
+      <li><b>순위 발표</b><span>먼저 통과한 모둠부터</span></li>
+    </ol>
+  </section>
+
+  <section class="g">
+    <div>
+      <h2>[수업] 안의 탭</h2>
+      <ul>
+        <li>개인 학습지: 혼자 쓰기</li>
+        <li>모둠활동: 우리 모둠, 모둠 게시판, 제출</li>
+        <li>게시판: 선생님이 올린 자료</li>
+        <li>퀴즈 쇼: 열렸을 때만 보임</li>
+      </ul>
+    </div>
+    <div class="pic" aria-hidden="true">
+      <div class="row"><span class="chip on">개인 학습지</span><span class="chip">모둠활동</span><span class="chip">게시판</span><span class="chip">퀴즈 쇼</span></div>
+    </div>
+  </section>
+
+  <section class="g">
+    <div>
+      <h2>개인 학습지</h2>
+      <ul>
+        <li>앞 화면 따라 저절로 넘어감</li>
+        <li>선생님이 열기 전에는 못 씀 (시뮬레이션도)</li>
+        <li>칸 다 채우고 [이 쪽 제출]</li>
+        <li>빨간 칸 = 틀림, 점선 칸 = 빈칸. 고쳐서 다시 제출</li>
+        <li>시뮬레이션 [제출]도 같은 제출</li>
+        <li>열어 둔 쪽은 ◀ ▶로 다시 보기</li>
+        <li>다 내면 완료, 점수</li>
+      </ul>
+    </div>
+    <div class="pic" aria-hidden="true">
+      <p style="color:var(--ink)">기체의 압력이 <span class="blank good">커지면</span> 부피는 <span class="blank bad">커진다</span></p>
+      <div class="row"><span class="chip re">고칠 칸 1개</span><span class="chip on">이 쪽 제출</span></div>
+      <div class="row"><span class="chip">선생님이 열면 쓸 수 있어요</span></div>
+      <div class="row"><span class="chip ok">제출함</span></div>
+    </div>
+  </section>
+
+  <section class="g">
+    <div>
+      <h2>모둠활동</h2>
+      <ul>
+        <li>모둠은 그날 선생님이 정함</li>
+        <li>모둠 게시판 ＋ 로 올리기 (글, 사진, 링크)</li>
+        <li>다 올리고 한 명만 [제출]</li>
+        <li>'다시' 받으면 메모 보고 고쳐서 또 제출</li>
+        <li>다른 모둠 결과는 발표 때 공개</li>
+      </ul>
+    </div>
+    <div class="pic" aria-hidden="true">
+      <div class="row"><span class="chip">진행 중</span><span class="chip wait">검사 대기</span><span class="chip re">다시</span><span class="chip ok">통과</span></div>
+    </div>
+  </section>
+
+  <section class="g">
+    <div>
+      <h2>퀴즈</h2>
+      <ul>
+        <li>퀴즈 배틀: 모둠활동 탭에 뜨면 입장. 우리 모둠끼리, 모둠 1등만 점수</li>
+        <li>퀴즈 쇼: 퀴즈 쇼 탭에서. 반 전체, 빨리 맞힐수록 점수 높음</li>
+      </ul>
+    </div>
+    <div class="pic" aria-hidden="true">
+      <span class="lbl">퀴즈 쇼 보기</span>
+      <div class="qs-opts"><span>● 고체</span><span>▲ 액체</span><span>■ 기체</span><span>◆ 플라스마</span></div>
+    </div>
+  </section>
+
+  <section class="g one">
+    <div>
+      <h2>점수</h2>
+      <div class="coins">
+        <div><b>XP</b><span>레벨, 이번 달 순위</span></div>
+        <div><b>금화</b><span>상점 보상<br>선생님 승인 필요</span></div>
+        <div><b>은화</b><span>XP만큼 쌓임<br>캐릭터 꾸미기</span></div>
+      </div>
+      <p style="margin-top:16px">받는 곳: 학습지 완료, 모둠 통과, 순위, 퀴즈<br>닉네임: 마이페이지에서 신청, 선생님 승인 뒤 순위에 표시</p>
+    </div>
+  </section>
+
+  <section class="g one">
+    <div>
+      <h2>약속</h2>
+      <ul class="rules">
+        <li>코드는 나만 알기. 친구 코드로 로그인 금지</li>
+        <li>수업 중 다른 화면 X (벗어나면 기록됨)</li>
+        <li>답은 내 생각으로</li>
+        <li>게시판에는 수업 내용만</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script>
+  // 이 사이트 주소(https:// 빼고, 안내문이 있는 폴더)
+  const addr = (location.host + location.pathname.replace(/[^/]*$/, '')).replace(/\/$/, '');
+  document.querySelectorAll('[data-addr]').forEach((el) => { el.textContent = addr; });
+  const slides = [...document.querySelectorAll('main .g')];
+  let at = 0;
+  function show(i) {
+    at = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, j) => s.classList.toggle('on', j === at));
+    document.getElementById('count').textContent = `${at + 1} / ${slides.length}`;
+  }
+  function slideMode(on) {
+    document.body.classList.toggle('slides', on);
+    if (on) show(at);
+    else { slides.forEach((s) => s.classList.remove('on')); scrollTo(0, 0); }
+    history.replaceState(null, '', on ? '?slide' : location.pathname);
+  }
+  document.getElementById('to-slides').onclick = () => { at = 0; slideMode(true); };
+  document.getElementById('to-scroll').onclick = () => slideMode(false);
+  document.getElementById('prev').onclick = () => show(at - 1);
+  document.getElementById('next').onclick = () => show(at + 1);
+  addEventListener('keydown', (e) => {
+    if (!document.body.classList.contains('slides')) return;
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(at + 1); }
+    else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); show(at - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key === 'Escape') slideMode(false);
+    else if (e.key === 'f' || e.key === 'F') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
+  });
+  if (new URLSearchParams(location.search).has('slide')) slideMode(true);
+</script>
+</body>
+</html>

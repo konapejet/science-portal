@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko" class="stu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="assets/img/icon-32.png" sizes="32x32">
+<link rel="icon" href="assets/img/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="assets/img/icon-180.png">
+<meta name="apple-mobile-web-app-title" content="과학">
+<title>신도림중 1학년 과학</title>
+<meta name="description" content="신도림중학교 1학년 과학 수업 포털. 반을 골라 로그인하고 수업자료·학습지·게임을 열어요.">
+<meta property="og:title" content="신도림중 1학년 과학">
+<meta property="og:description" content="신도림중학교 1학년 과학 수업 포털">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/design.css">
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="stylesheet" href="assets/css/study.css">
+<style>
+html.stu #go-study { background: #EEF3EE; }
+</style>
+</head>
+<body>
+<main class="wrap main-wrap">
+  <div class="main-top">
+    <div class="glass pill brand">
+      <svg class="draw" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2457E6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6"/><path d="M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7 15h10"/></svg>
+      1학년 과학
+    </div>
+    <div class="top-links">
+      <a class="nav-link glass lift" href="rank.html" id="top-rank">이번 달 순위</a>
+      <button type="button" class="nav-link glass lift hidden" id="logout">로그아웃</button>
+    </div>
+  </div>
+
+  <!-- 로그인 -->
+  <section class="login-view hidden" id="v-login" aria-labelledby="login-h">
+    <h1 class="main-title rise" id="login-h">로그인</h1>
+    <form class="login-box glass-strong rise" style="--d:.06s" id="login-form" autocomplete="off">
+      <div class="field">
+        <span>반</span>
+        <div class="login-classes" id="cls-pick" role="radiogroup" aria-label="반"></div>
+      </div>
+      <div class="login-row">
+        <label class="field"><span>번호</span>
+          <input id="num-in" class="code-input num-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" required>
+        </label>
+        <label class="field"><span>내 코드 6자리</span>
+          <input id="code-in" class="code-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="● ● ● ● ● ●" required>
+          <span class="code-slots" id="code-slots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        </label>
+      </div>
+      <button class="btn btn-primary btn-big press" type="submit">로그인</button>
+    </form>
+    <div class="guest rise" style="--d:.12s">
+      <span class="guest-label">코드 없이 수업 보기</span>
+      <nav class="guest-links" id="guest" aria-label="코드 없이 수업 보기"></nav>
+    </div>
+    <div class="guest rise" style="--d:.15s" id="guest-study">
+      <span class="guest-label">기말 정리 · 로그인 없이</span>
+      <nav class="guest-links" aria-label="기말 정리"><a class="guest-link" href="study.html">5단원 힘의 작용</a></nav>
+    </div>
+    <!-- 다른 선생님 사이트에서만(IS_MAIN이 아닐 때) 보인다 -->
+    <div class="first-row rise hidden" style="--d:.18s" id="first-row">
+      <button type="button" class="btn btn-primary press" id="go-signup">처음 가입</button>
+      <a class="btn btn-line press" href="guide.html">사용 안내</a>
+      <button type="button" class="btn btn-line press" id="install-app">바로가기 만들기</button>
+    </div>
+  </section>
+
+  <!-- 학번으로 첫 가입 -->
+  <section class="login-view hidden" id="v-signup" aria-labelledby="signup-h">
+    <h1 class="main-title rise" id="signup-h">처음 가입</h1>
+    <form class="login-box glass-strong rise" style="--d:.06s" id="signup-form" autocomplete="off">
+      <label class="field"><span>학번 5자리</span>
+        <input id="su-id" class="code-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="10101" required>
+        <b class="su-who" id="su-who"></b>
+      </label>
+      <label class="field"><span>코드 6자리 (직접 정하기)</span>
+        <input id="su-code" class="code-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="● ● ● ● ● ●" required>
+      </label>
+      <label class="field"><span>코드 한 번 더</span>
+        <input id="su-code2" class="code-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="● ● ● ● ● ●" required>
+      </label>
+      <p class="su-note">다음부터 로그인할 때 씀. 친구에게 알려 주지 않기</p>
+      <button class="btn btn-primary btn-big press" type="submit">가입</button>
+      <button class="btn btn-line press" type="button" id="su-back">로그인으로</button>
+    </form>
+  </section>
+
+  <!-- 가입 끝: 코드를 한 번 크게 보여 준다 -->
+  <section class="login-view hidden" id="v-signed" aria-labelledby="signed-h">
+    <h1 class="main-title rise" id="signed-h">가입 완료</h1>
+    <div class="login-box glass-strong rise signed-box" style="--d:.06s">
+      <span class="su-who" id="sd-who"></span>
+      <span class="sd-label">내 코드</span>
+      <b class="sd-code num" id="sd-code"></b>
+      <p class="su-note">공책에 적어 두기. 다음부터 반, 번호, 이 코드로 로그인</p>
+      <button class="btn btn-primary btn-big press" type="button" id="sd-go">들어가기</button>
+    </div>
+  </section>
+
+  <!-- 로그인 뒤 -->
+  <section class="home hidden" id="v-home">
+    <div class="home-me glass-strong rise">
+      <div class="home-av" id="home-av"></div>
+      <h1 class="home-nick" id="home-nick"></h1>
+      <span class="chip" id="home-cls"></span>
+      <div class="home-lv hidden" id="home-lv">
+        <div class="home-lv-row"><b id="home-lv-n"></b><span class="num" id="home-lv-xp"></span></div>
+        <div class="home-bar"><i id="home-bar"></i></div>
+      </div>
+      <div class="home-stats hidden" id="home-stats">
+        <div><b class="num" id="hs-rank">–</b><span>이번 달 순위</span></div>
+        <div><b class="num" id="hs-coins">0</b><span>금화</span></div>
+        <div><b class="num" id="hs-silver">0</b><span>은화</span></div>
+      </div>
+    </div>
+    <nav class="home-menu" aria-label="메뉴">
+      <a class="home-item glass glass-live lift rise" style="--d:.06s" id="go-class" href="#">
+        <span class="home-ic" aria-hidden="true"><svg class="draw" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg></span>
+        <span class="home-txt"><b>수업</b><span id="go-class-sub"></span></span>
+        <span class="home-go" aria-hidden="true">›</span>
+      </a>
+      <a class="home-item glass glass-live lift rise" style="--d:.12s" href="me.html">
+        <span class="home-ic" aria-hidden="true"><svg class="draw" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+        <span class="home-txt"><b>마이페이지</b><span id="go-me-sub"></span></span>
+        <span class="home-go" aria-hidden="true">›</span>
+      </a>
+      <a class="home-item glass glass-live lift rise" style="--d:.18s" href="shop.html">
+        <span class="home-ic" aria-hidden="true"><svg class="draw" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.2 10.2A2 2 0 0 1 16.8 21H7.2a2 2 0 0 1-2-1.8z"/><path d="M8.5 9V7a3.5 3.5 0 0 1 7 0v2"/></svg></span>
+        <span class="home-txt"><b>상점</b><span id="go-shop-sub"></span></span>
+        <span class="home-go" aria-hidden="true">›</span>
+      </a>
+      <a class="home-item glass glass-live lift rise home-row" style="--d:.27s" href="study.html" id="go-study">
+        <span class="home-ic" aria-hidden="true"><svg class="draw" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/><path d="M8 8h8M8 12h5"/></svg></span>
+        <span class="home-txt"><b>기말 정리</b><span>5단원 힘의 작용</span></span>
+        <span class="home-go" aria-hidden="true">›</span>
+      </a>
+      <a class="home-item glass glass-live lift rise" style="--d:.30s" href="rank.html">
+        <span class="home-ic" aria-hidden="true"><svg class="draw" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 6h3v1a3 3 0 0 1-3 3"/><path d="M7 6H4v1a3 3 0 0 0 3 3"/></svg></span>
+        <span class="home-txt"><b>이번 달 순위</b><span id="go-rank-sub"></span></span>
+        <span class="home-go" aria-hidden="true">›</span>
+      </a>
+    </nav>
+    <!-- 우리 반 게시판(선생님이 올린 자료). 자료가 있을 때만 보인다 -->
+    <section class="board-card glass home-mats hidden" id="home-mats" aria-labelledby="home-mats-h">
+      <div class="board-head"><h2 id="home-mats-h">우리 반 게시판</h2></div>
+      <div class="post-board" id="home-mats-board"></div>
+    </section>
+  </section>
+</main>
+<dialog class="sheet" id="install-dlg" aria-labelledby="install-h">
+  <div class="card glass-strong">
+    <h2 id="install-h">바로가기 만들기</h2>
+    <ol>
+      <li>크롬 새 탭 (Ctrl + T)</li>
+      <li>아래 동그라미 [＋ 바로가기 추가]</li>
+      <li>이름: 과학<br>URL: <b class="num" id="install-addr"></b></li>
+      <li>[완료]</li>
+    </ol>
+    <p class="su-note">다음부터 새 탭의 '과학'으로 들어옴</p>
+    <button class="btn btn-primary press" type="button" id="install-close">닫기</button>
+  </div>
+</dialog>
+<script type="module" src="assets/js/pages/index.js"></script>
+</body>
+</html>

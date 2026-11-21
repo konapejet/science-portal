@@ -359,14 +359,14 @@ function paintToday() {
     const cl = `hero-chip${r === at ? ' now' : ''}${r.kind !== '수업' ? ' off' : ''}`;
     const url = openUrl(r);
     return url
-      ? `<a class="${cl}" href="${url}" style="display:block;text-decoration:none;cursor:pointer" title="수업 모드로 열기">${inner}</a>`
+      ? `<a class="${cl}" href="${url}" data-go-live="${r.class_id}:${escH(r.code)}" style="display:block;text-decoration:none;cursor:pointer" title="수업 모드로 열기">${inner}</a>`
       : `<div class="${cl}">${inner}</div>`;
   }).join('');
   if (at) {
     const live = at.start && now >= at.start;
     const url = openUrl(at);
     const text = `${live ? '지금 수업' : '다음 수업'} · ${at.period}교시 <b class="acc">${escH(cls(at))}</b> <b>${escH(at.code || '')} ${escH(at.title)}</b>`;
-    next.innerHTML = url ? `<a href="${url}" style="color:inherit;text-decoration:none" title="수업 모드로 열기">${text} <b class="acc">▶ 열기</b></a>` : text;
+    next.innerHTML = url ? `<a href="${url}" data-go-live="${at.class_id}:${escH(at.code)}" style="color:inherit;text-decoration:none" title="수업 모드로 열기">${text} <b class="acc">▶ 열기</b></a>` : text;
   }
   next.classList.toggle('hidden', !at);
 }

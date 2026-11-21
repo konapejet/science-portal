@@ -144,7 +144,8 @@ function contextHTML(it, phase) {
     const s = document.createElement('span');
     if (k === it.key) {
       s.className = `qb-slot-target${revealed ? ' is-reveal' : ''}`;
-      s.textContent = revealed ? (it.answer ?? []).join(' / ') : '?';
+      // 정답 글은 학습지를 끝낸 학생에게만 온다(서버 _qb_view). 안 오면 '?' 그대로
+      s.textContent = revealed && it.answer ? it.answer.join(' / ') : '?';
     } else if (it.solved && k in it.solved) {
       s.className = 'qb-slot-solved';
       s.textContent = it.solved[k];
@@ -157,7 +158,7 @@ function contextHTML(it, phase) {
   const html = (box === wrap ? wrap.innerHTML : box.outerHTML).trim();
   if (html && target) return html;
   // 칸을 찾지 못하면(학습지를 다시 올림) 칸만
-  return `<span class="qb-slot-target${revealed ? ' is-reveal' : ''}">${revealed ? esc((it.answer ?? []).join(' / ')) : '?'}</span>`;
+  return `<span class="qb-slot-target${revealed ? ' is-reveal' : ''}">${revealed && it.answer ? esc(it.answer.join(' / ')) : '?'}</span>`;
 }
 
 function renderPlayers(g) {
@@ -231,7 +232,7 @@ function renderTable() {
     }
   } else {
     setHTML($('q-ans'), `<div class="qb-choices">${(it.options ?? []).map((o) => {
-      const right = g.phase === 'reveal' && (it.answer ?? []).includes(o);
+      const right = g.phase === 'reveal' && (it.answer ? it.answer.includes(o) : mine === o && !!it.mine?.ok);
       const wrong = g.phase === 'reveal' && mine === o && !right;
       const cls = right ? ' is-right' : wrong ? ' is-wrong' : mine === o ? ' is-picked' : '';
       return `<button type="button" class="qb-opt press${cls}" data-v="${esc(o)}" aria-pressed="${mine === o}"${lockAll ? ' disabled' : ''}>${esc(o)}</button>`;
@@ -242,7 +243,8 @@ function renderTable() {
   if (g.phase === 'ask') $('q-status').textContent = answered ? `${n} / ${g.players.length}명 냈어요` : '';
   else if (g.phase === 'reveal') {
     const me = it.mine;
-    $('q-status').textContent = `정답 ${(it.answer ?? []).join(' / ')}${me ? (me.ok ? ' · 맞혔어요' : ' · 틀렸어요') : ' · 못 냈어요'}`;
+    const res = me ? (me.ok ? '맞혔어요' : '틀렸어요') : '못 냈어요';
+    $('q-status').textContent = it.answer ? `정답 ${it.answer.join(' / ')} · ${res}` : res;
   }
 }
 

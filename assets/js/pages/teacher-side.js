@@ -36,7 +36,7 @@ function initTop() {
       <a class="tn-pill" href="#lessons">수업 시작 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a></div>`;
   const nav = top.querySelector('.tn-nav');
   document.querySelectorAll('#hub .hub-group').forEach((g) => {
-    const items = [...g.querySelectorAll('.hub-item')];
+    const items = [...g.querySelectorAll('.hub-item:not([data-hide-menu])')];
     const menu = document.createElement('div');
     menu.className = 'tn-menu';
     menu.innerHTML = '<button type="button" class="tn-btn" aria-haspopup="true"></button><div class="tn-drop"></div>';
@@ -99,7 +99,7 @@ export function initSide() {
     sec.className = `side-group ${cls}`;
     sec.innerHTML = '<h2 class="side-label"></h2>';
     sec.firstChild.textContent = g.querySelector('.hub-label').textContent;
-    g.querySelectorAll('.hub-item').forEach((a) => sec.append(link(a, cls)));
+    g.querySelectorAll('.hub-item:not([data-hide-menu])').forEach((a) => sec.append(link(a, cls)));
     nav.append(sec);
   });
 

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko" class="tch">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>교사 로그인</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/design.css">
+<link rel="stylesheet" href="assets/css/site.css">
+<style>
+  .tl-wrap { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+  .tl-wrap .login-card { width: min(420px, 100%); }
+</style>
+</head>
+<body>
+<!-- 교사 화면(teacher/…)의 입구. Cloudflare 문지기(functions/_middleware.js)가 교사 로그인 쿠키가 없으면 여기로 보낸다(?next=원래 주소) -->
+<main class="tl-wrap">
+  <form class="card glass-strong login-card rise hidden" id="f">
+    <h2>교사 로그인</h2>
+    <label class="field"><span>이메일</span><input class="input" type="email" name="email" autocomplete="username" required></label>
+    <label class="field"><span>비밀번호</span><input class="input" type="password" name="password" autocomplete="current-password" required></label>
+    <p class="muted hidden" id="msg" style="margin:0"></p>
+    <button class="btn btn-primary" type="submit">로그인</button>
+  </form>
+</main>
+<script type="module">
+import { getSession, signIn, signOut, amITeacher } from './assets/js/db.js';
+
+const q = new URLSearchParams(location.search);
+// 같은 사이트 안의 주소만(//다른사이트 막기)
+const raw = q.get('next') || '/teacher/';
+const next = /^\/(?!\/)/.test(raw) ? raw : '/teacher/';
+const form = document.getElementById('f');
+const msg = document.getElementById('msg');
+const say = (t) => { msg.textContent = t; msg.classList.toggle('hidden', !t); };
+
+// 문지기가 읽는 쿠키를 지금 세션으로 바로 맞추고 원래 화면으로
+function go(session) {
+  document.cookie = `tj=${session.access_token}; Path=/; Max-Age=86400; SameSite=Lax; Secure`;
+  location.replace(next + (next.includes('#') ? '' : location.hash)); // #boards 같은 항목 주소 이어 가기
+}
+
+async function tryAuto() {
+  // 쿠키 토큰만 지났고 로그인은 살아 있으면(새로 고친 토큰) 바로 돌아간다. 30초 안에 또 오면 멈춘다(되돌이 막기)
+  let last = 0;
+  try { last = Number(sessionStorage.getItem('tl-auto')) || 0; } catch {}
+  if (Date.now() - last < 30000) { stuck = true; return false; }
+  const s = await getSession().catch(() => null);
+  if (s && await amITeacher().catch(() => false)) {
+    try { sessionStorage.setItem('tl-auto', String(Date.now())); } catch {}
+    go(s);
+    return true;
+  }
+  return false;
+}
+let stuck = false;
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = form.querySelector('[type="submit"]');
+  btn.disabled = true;
+  say('');
+  try {
+    await signIn(form.email.value.trim(), form.password.value);
+    const s = await getSession();
+    if (!(await amITeacher())) { await signOut(); throw new Error('NOT_TEACHER'); }
+    go(s);
+  } catch (err) {
+    say(/Invalid login/i.test(err?.message || '') ? '이메일 또는 비밀번호가 맞지 않아요'
+      : /NOT_TEACHER/.test(err?.message || '') ? '교사로 등록되지 않은 계정이에요'
+      : '로그인하지 못했어요. 인터넷 연결을 확인해 주세요');
+    btn.disabled = false;
+  }
+});
+
+if (!(await tryAuto())) {
+  if (stuck) say('다시 로그인해 주세요');
+  form.classList.remove('hidden');
+}
+</script>
+</body>
+</html>

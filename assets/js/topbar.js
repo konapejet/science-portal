@@ -15,7 +15,8 @@ const IC = {
   rank: '<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M12 14v7M8 21h8"/>',
   board: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/>',
 };
-const PAGE = location.pathname.split('/').pop() || 'index.html';
+// Cloudflare Pages는 주소에서 .html을 뗀다(class.html → class)
+const PAGE = ((n) => !n ? 'index.html' : /\.html?$/.test(n) ? n : n + '.html')(location.pathname.split('/').pop());
 const CUR = /^(index|test)\.html$/.test(PAGE) ? 'home'
   : /^(class|quiz|quizshow)\.html$/.test(PAGE) ? 'cls'
   : PAGE === 'me.html' ? 'me' : PAGE === 'shop.html' ? 'shop' : PAGE === 'rank.html' ? 'rank'

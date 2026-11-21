@@ -373,6 +373,7 @@ function renderRoster() {
   $('issue-all').disabled = !active.length;
   $('codes-toggle').textContent = codesShown ? '코드 숨기기' : '코드 보기';
   $('codes-toggle').disabled = !active.some((s) => s.has_code);
+  $('codes-sheet').disabled = !active.some((s) => s.code);
 
   $('roster-list').innerHTML = list.length ? list.map((s) => `
     <div class="roster-row${s.active ? '' : ' off'}" data-sid="${s.id}">
@@ -548,6 +549,20 @@ async function issue(onlyMissing) {
   }
 }
 $('codes-toggle').addEventListener('click', () => { codesShown = !codesShown; renderRoster(); });
+// 반 코드표: 저장된 코드(학생이 정한 것·발급한 것)를 한 창에. 이 기능 전 코드는 '모름'이라 빠짐
+$('codes-sheet').addEventListener('click', () => {
+  const n = rosterClass;
+  const active = students.filter((s) => s.class_id === n && s.active).sort((a, b) => a.number - b.number);
+  const list = active.filter((s) => s.code).map((s) => ({ class_id: n, number: s.number, code: s.code }));
+  if (!list.length) { toast('저장된 코드가 없어요', 'error'); return; }
+  const unknown = active.filter((s) => s.has_code && !s.code).map((s) => s.number);
+  const none = active.filter((s) => !s.has_code).map((s) => s.number);
+  const note = [
+    unknown.length ? `모름 ${unknown.join(', ')}번` : '',
+    none.length ? `코드 없음 ${none.join(', ')}번` : '',
+  ].filter(Boolean).join(' · ');
+  showCodes(list, `${clsName(n)}반 코드 ${list.length}명`, note);
+});
 $('issue-missing').addEventListener('click', () => issue(true));
 $('issue-all').addEventListener('click', () => issue(false));
 
@@ -556,8 +571,10 @@ function siteAddress() {
   return (base.host + base.pathname).replace(/\/$/, '');
 }
 
-function showCodes(list, title) {
+function showCodes(list, title, note = '') {
   $('codes-title').textContent = title;
+  $('codes-note').textContent = note;
+  $('codes-note').classList.toggle('hidden', !note);
   $('codes-preview').innerHTML = list.map((c) => `<span>${c.number}번 <b>${esc(c.code)}</b></span>`).join('');
   const site = esc(siteAddress());
   $('print-sheet').innerHTML = list.map((c) => `
@@ -1342,8 +1359,42 @@ function renderLessons() {
   updateHub();
 }
 
+// 이 포털 저장소의 lessons/ 폴더에 수업자료가 있는데 차시 창이 없으면 만든다(공유 자료실에서 받은 차시 포함).
+// GitHub Pages 주소(아이디.github.io/저장소/)에서만 되고, 못 읽으면 조용히 넘어간다. 10분에 한 번만 확인
+async function autoLessonWindows(known) {
+  const m = location.hostname.match(/^([a-z0-9-]+)\.github\.io$/i);
+  if (!m) return false;
+  const last = Number(sessionStorage.getItem('lessonScan')) || 0;
+  if (Date.now() - last < 10 * 60 * 1000) return false;
+  sessionStorage.setItem('lessonScan', String(Date.now()));
+  const owner = m[1];
+  const repo = location.pathname.split('/')[1] && !/\.html?$/.test(location.pathname.split('/')[1]) && location.pathname.split('/')[1] !== 'teacher'
+    ? location.pathname.split('/')[1] : `${owner}.github.io`;
+  let files;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/lessons`, { headers: { Accept: 'application/vnd.github+json' } });
+    if (!r.ok) return false;
+    files = await r.json();
+  } catch { return false; }
+  if (!Array.isArray(files)) return false;
+  let made = false;
+  for (const f of files) {
+    const c = /^([0-9]{3}[A-Za-z0-9]*)\.html$/.exec(f.name)?.[1];
+    if (!c || known.has(c)) continue;
+    const url = new URL(`../lessons/${f.name}`, location.href).href;
+    try { // 사이트에 아직 안 올라온 파일이면 다음에
+      const h = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+      if (!h.ok) continue;
+      await saveLesson({ code: c, title: '', lesson_src: url, sort: parseInt(c, 10) || 0 });
+      made = true;
+    } catch { /* 다음에 다시 */ }
+  }
+  return made;
+}
+
 async function refreshLessons() {
-  const [ls, ws] = await Promise.all([listLessons(), listWorksheets()]);
+  let [ls, ws] = await Promise.all([listLessons(), listWorksheets()]);
+  if (await autoLessonWindows(new Set(ls.map((l) => l.code))).catch(() => false)) ls = await listLessons();
   lessons = ls;
   sheets = new Map(ws.map((w) => [w.lesson_code, w]));
   renderLessons();
@@ -1535,6 +1586,39 @@ $('lesson-list').addEventListener('click', async (e) => {
   }
 });
 
+// 첫 화면 오늘 수업 칩 / 다음 수업: 한 번 누르면 보드 만들기(없으면) → 오늘 보드 → 학생 화면 새로고침 → 수업 모드
+document.addEventListener('click', async (e) => {
+  const a = e.target.closest('[data-go-live]');
+  if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey) return;
+  e.preventDefault();
+  if (a.dataset.busy) return;
+  const [cid, code] = a.dataset.goLive.split(':');
+  const classId = Number(cid);
+  a.dataset.busy = '1';
+  a.style.opacity = '.6';
+  try {
+    let b = lessonBoard(classId, code);
+    if (!b) {
+      const l = lessonWindows().find((x) => x.code === code);
+      const [made] = await createBoards({ lesson_code: code, title: l?.title || code, sim_links: lessonSims(code) ?? [], items: [{ class_id: classId }], setToday: false });
+      b = made;
+      boards = await listBoards();
+      b = lessonBoard(classId, code) ?? b;
+    }
+    const c = classes.find((x) => x.id === classId);
+    if (b && c?.today_board_id !== b.id) {
+      await setTodayBoard(classId, b.id);
+      sendClassRefresh(classId);
+    }
+    localStorage.setItem(LIVE_CLASS, String(classId));
+    location.href = a.href;
+  } catch (err) {
+    toast(errMsg(err), 'error');
+    delete a.dataset.busy;
+    a.style.opacity = '';
+  }
+});
+
 $('lesson-add').addEventListener('submit', async (e) => {
   e.preventDefault();
   const f = e.currentTarget;
@@ -1637,8 +1721,10 @@ addEventListener('hashchange', route);
 route();
 
 /* ---------- 시작 ---------- */
+// 서버가 가끔 시간 초과(522)로 한 번 실패한다 → 두 번 더 해 본다(반 버튼이 비는 일 막기, 2026-11-17)
+const retry = async (fn, n = 2) => { try { return await fn(); } catch (err) { if (n <= 0) throw err; await new Promise((r) => setTimeout(r, 800)); return retry(fn, n - 1); } };
 async function refresh() {
-  [classes, boards, lessonMeta] = await Promise.all([listClasses(), listBoards(), listLessons().catch(() => [])]);
+  [classes, boards, lessonMeta] = await Promise.all([retry(listClasses), retry(listBoards), retry(listLessons).catch(() => [])]);
   renderToday();
   renderBoards();
   renderLocks();

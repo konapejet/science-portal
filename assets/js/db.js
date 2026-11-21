@@ -6,6 +6,15 @@ export const isConfigured = !SUPABASE_URL.includes('YOUR-') && !SUPABASE_ANON_KE
 
 export const sb = isConfigured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
+// 교사 로그인 쿠키(tj): 수업자료·시뮬레이션 문지기(functions/_middleware.js)가 교사인지 확인할 때 쓴다. 토큰이 새로 바뀔 때마다 맞춘다
+sb?.auth.onAuthStateChange((event, session) => {
+  try {
+    document.cookie = session?.access_token
+      ? `tj=${session.access_token}; Path=/; Max-Age=86400; SameSite=Lax; Secure`
+      : 'tj=; Path=/; Max-Age=0; SameSite=Lax; Secure';
+  } catch {}
+});
+
 function need() {
   if (!sb) throw new Error('NOT_CONFIGURED');
   return sb;

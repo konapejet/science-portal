@@ -3427,3 +3427,66 @@ html.tch .qse-side .btn-line { background: #fff; } html.tch .qse-side .btn-line:
 .mmw-card.none .mmw-who { color: #8A8A8A; font-size: clamp(20px, 2vw, 28px); }
 .mmw-p { font-size: clamp(16px, 1.5vw, 21px); font-weight: 700; color: #5D5D5D; }
 .stage.plain .mmw:not(.hidden) .mmw-card { animation: pop .6s var(--ease-back) both; animation-delay: var(--d, 0s); }
+
+/* ---------- 2026-11-22 개인 학습지 새 배치 (디자인 캔버스 A·C) ----------
+   위 줄: 왼쪽 반 이름 | 가운데 탭 | 오른쪽(마이페이지·순위, 위 메뉴가 있으면 비어 있음)
+   시뮬레이션 쪽(A): 왼쪽 시뮬레이션 크게, 오른쪽 문항 칸. 문항만 있는 쪽(C): 가운데 한 줄
+   쪽 번호는 화면 아래 가운데에 떠 있는 반투명 알약, [이 쪽 제출]은 오른쪽 아래에 고정 */
+html.stu .class-top { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; }
+html.stu .class-top > .left { justify-self: start; }
+html.stu .class-top > .class-tabs { justify-self: center; align-self: center; }
+html.stu .class-top > .top-links { justify-self: end; }
+@media (max-width: 900px) {
+  html.stu .class-top { grid-template-columns: minmax(0, 1fr) auto; }
+  html.stu .class-top > .class-tabs { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+}
+
+/* 학습지 바탕은 흰색, 문항 하나하나가 연회색 카드 */
+html.stu .ws-card { margin-inline: auto; background: transparent; padding: 8px 0 104px; }
+html.stu .ws-card:not(.has-side) { max-width: 800px; }
+html.stu .ws-page .w-q { background: #F7F7F7; border-radius: 20px; padding: 14px 18px; margin: 10px 0; }
+html.stu .ws-page td .w-q { background: none; border-radius: 0; padding: 0; margin: 0; }
+html.stu .ws-page .w-n { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; padding: 0 6px; box-sizing: border-box;
+  margin-right: 8px; border-radius: 999px; background: #0D0D0D; color: #fff; font-size: 14px; font-weight: 900; line-height: 1; vertical-align: 2px; }
+html.stu .ws-page .w-n:empty { display: none; }
+html.stu .ws-page .w-q .ws-opt:not([aria-pressed="true"]) { background: #fff; border-color: transparent; }
+
+/* A: 시뮬레이션 쪽 — 왼쪽 시뮬레이션, 오른쪽 문항 칸(위·아래 끝이 같다) */
+@media (min-width: 1100px) {
+  html.stu .ws-card.has-side:not(.sim-only):not(.is-game) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+    column-gap: 20px; row-gap: 14px; align-items: start; max-width: none; }
+  html.stu .ws-card.has-side:not(.sim-only):not(.is-game) .ws-main { display: contents; }
+  html.stu .ws-card.has-side:not(.sim-only):not(.is-game) .ws-head { grid-column: 1 / -1; grid-row: 1; align-items: flex-end; }
+  html.stu .ws-card.has-side:not(.sim-only):not(.is-game) .ws-side { grid-column: 1; grid-row: 2 / span 8; position: sticky; top: 84px;
+    height: calc(100vh - 290px); min-height: 480px; padding: 12px; box-sizing: border-box; border-radius: 28px; background: #F7F7F7; }
+  html.stu .ws-card.has-side:not(.sim-only):not(.is-game) :is(.ws-group, #ws-login, .ws-page, .ws-foot) { grid-column: 2; }
+  html.stu .ws-card.has-side:not(.sim-only):not(.is-game) .ws-page { background: #F7F7F7; border-radius: 28px; padding: 20px; }
+  html.stu .ws-card.has-side:not(.sim-only):not(.is-game) .ws-page .w-q { background: #fff; }
+  html.stu .ws-card.has-side:not(.sim-only):not(.is-game) .ws-page .w-q .ws-opt:not([aria-pressed="true"]) { background: #F0F0F0; }
+  html.stu .ws-card.has-side .ws-side .ws-sim-frame { border: 0; border-radius: 20px; }
+  html.stu .ws-card.has-side.sim-only .ws-side { height: calc(100vh - 196px); }
+}
+html.stu .ws-side.mm-big { padding: 0 !important; border-radius: 0 !important; }
+
+/* 쪽 번호: 아래 가운데에 떠 있음. 배경은 단추 폭만큼, 단추와 배경 모두 살짝 비침 */
+@media (min-width: 861px) {
+  html.stu .ws-nav { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 30; width: max-content; max-width: calc(100% - 32px);
+    box-sizing: border-box; padding: 6px; gap: 6px; border-radius: 28px; background: rgba(255,255,255,.5);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 0 0 1px rgba(13,13,13,.06); }
+  html.stu #ws-submit, html.stu .ws-foot .ws-pagedone { position: fixed; right: 32px; bottom: 20px; z-index: 31; min-height: 52px;
+    box-shadow: 0 0 0 1px rgba(13,13,13,.06); }
+  html.stu .ws-foot .ws-pagedone { background: #DDF5EB; }
+  /* 제출한 쪽 수: 왼쪽 아래에 고정(쪽 번호·제출과 같은 높이), 글자만 */
+  html.stu .ws-foot .ws-prog { position: fixed; left: 32px; bottom: 20px; z-index: 30; display: inline-flex; align-items: center; gap: 4px;
+    min-height: 52px; padding: 0; background: none; white-space: nowrap; }
+}
+html.stu .ws-nav .icon-btn { width: 40px; height: 40px; background: rgba(240,240,240,.72); }
+html.stu .ws-card.is-follow:not(.can-move) .ws-nav .icon-btn { display: none; }
+html.stu .ws-dots { flex: 0 1 auto; }
+html.stu .ws-dot { min-width: 40px; height: 40px; border: 0; background: rgba(240,240,240,.72); color: #0D0D0D; font-weight: 700; }
+html.stu .ws-dot.is-full { background: rgba(240,240,240,.72); color: #0D0D0D; box-shadow: inset 0 0 0 1.5px #0D0D0D; }
+html.stu .ws-dot.is-done { background: rgba(34,197,130,.18); color: #0F8A5F; }
+html.stu .ws-dot.is-bad { background: rgba(255,122,69,.16); color: #A23B0B; }
+html.stu .ws-dot.is-closed { color: #8A8A8A; opacity: 1; }
+html.stu .ws-dot.is-checking { box-shadow: inset 0 0 0 1.5px #BDBDBD; }
+html.stu .ws-dot.on, html.stu .ws-dot.on.is-done { background: rgba(13,13,13,.85); color: #fff; box-shadow: none; }

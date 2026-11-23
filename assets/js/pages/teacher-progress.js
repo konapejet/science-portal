@@ -1,5 +1,5 @@
-// 관리 '진도 관리'(#progress): 노션 '2학기 진도관리'를 옮김.
-// 오늘 수업 · 반별 진도(다음 차시, 남은 차시, 마감까지 남은 수업, 여유) · 주간 수업일 · 기본 시간표 · 차시 순서
+// 관리 '진도'(#progress): 노션 '2학기 진도관리'를 옮김.
+// 반별 진도(차시 점, 다음 차시, 남은 차시·수업, 여유) · 주간 요일 카드 · 설정(기본 시간표 · 수업일 · 캘린더 · 차시 순서)
 // 칸을 바꾸면 바로 저장한다. 수업 모드를 열면 그날 수업 줄에 차시가 적히고 다음 차시가 넘어간다(db.js recordLessonTaught)
 import { CLASSES, clsName } from '../config.js';
 import { toast, esc } from '../ui.js';
@@ -25,7 +25,7 @@ let cal = { token: '', periods: [] };
 let taught = [];   // 차시를 적은 수업 줄 (class_id, lesson_code)
 let days = [];      // 오늘 ~ 마감, 보는 주를 모두 덮는 수업일
 let deadline = DEFAULT_DEADLINE;
-let weekStart = monday(kstDay());
+let weekStart = thisWeek();
 const panel = document.querySelector('[data-panel="progress"]');
 
 // 'YYYY-MM-DD' 날짜 계산 (시간대와 상관없이 날짜만)
@@ -36,6 +36,8 @@ function addDays(day, n) {
 }
 function wdOf(day) { return new Date(`${day}T00:00:00Z`).getUTCDay(); }
 function monday(day) { const w = wdOf(day); return addDays(day, w === 0 ? -6 : 1 - w); }
+// 주간에 처음 보이는 주: 평일은 이번 주, 토·일은 다음 주
+function thisWeek() { const t = kstDay(); const w = wdOf(t); return w === 0 || w === 6 ? addDays(monday(t), 7) : monday(t); }
 const md = (day) => `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}`;
 
 // 반의 진도 계획: 단원이 있고 그 반이 하는 차시(classes가 비면 모든 반)
@@ -138,8 +140,6 @@ function progressOf(c) {
 
 /* ---------- 그리기 (노션식: 칸은 글자처럼 보이고 누르면 고친다) ---------- */
 
-let view = (() => { try { return localStorage.getItem('pgView') || 'today'; } catch { return 'today'; } })();
-
 const kindSelect = (attr, value) => `<select class="nd-ghost nd-tag" data-kind-v="${esc(value)}" ${attr} aria-label="구분">${
   KINDS.map((k) => `<option${k === value ? ' selected' : ''}>${k}</option>`).join('')}</select>`;
 
@@ -172,56 +172,28 @@ function plannedOf(c) {
   return out;
 }
 
-function dayRowsHTML(rows) {
-  const today = kstDay();
-  const plans = new Map(classes.map((c) => [c.id, plannedOf(c)]));
-  return rows.map((r) => {
-    const next = plans.get(r.class_id)?.get(r.id);
-    const planned = !r.lesson_code && r.kind === '수업' && r.day >= today && next;
-    return `<tr class="${r.day === today ? 'nd-now' : ''}">
-      <td class="n">${r.period}교시</td>
-      <td>${clsName(r.class_id)}반</td>
-      <td>${kindSelect(`data-day-kind="${r.id}"`, r.kind)}</td>
-      <td>${lessonSelect(`data-day-lesson="${r.id}"`, r.lesson_code, planned ? `${esc(lessonName(next))} · 예정` : '—')}</td>
-      <td>${memoInput(`data-day-memo="${r.id}"`, r.memo)}</td>
-    </tr>`;
-  }).join('');
-}
-
-const DAY_HEAD = '<thead><tr><th>교시</th><th>반</th><th>구분</th><th>차시</th><th>메모</th></tr></thead>';
-
-function todayHTML() {
-  const rows = days.filter((r) => r.day === kstDay());
-  return rows.length
-    ? `<table class="nd-table">${DAY_HEAD}<tbody>${dayRowsHTML(rows)}</tbody></table>`
-    : '<div class="nd-empty">오늘은 수업이 없어요</div>';
-}
-
-function nowHTML(a) {
-  if (!a.cur) return '<span class="muted">기록 없음</span>';
-  const { lesson, slide, total, revealed, done } = a.cur;
-  const pct = total ? Math.min(100, Math.round((slide / total) * 100)) : 0;
-  const pages = total ? `${Math.min(slide, total)}/${total}쪽` : (slide ? `${slide}쪽까지` : '');
-  return `${total ? `<span class="nd-bar-in${done ? ' done' : ''}" title="${done ? '이 차시 끝' : ''}"><i style="width:${pct}%"></i></span>` : ''}${esc(lesson.code)} ${pages}${
-    revealed ? ' <span class="nd-tag green">모둠활동 완료</span>' : ''}`;
-}
-
+// 반별 진도: 차시마다 점 하나(끝남 초록 · 다음 테두리 · 남음 회색), 다음 차시, 여유
 function classesHTML() {
-  return `<table class="nd-table"><thead><tr>
-      <th>반</th><th>지금 진도</th><th>다음 차시</th><th>남은 차시</th><th>남은 수업</th><th>여유</th><th>메모</th>
-    </tr></thead><tbody>${classes.map((c) => {
-      const g = progressOf(c);
-      const tone = g.spare < 0 ? 'bad' : g.spare <= 1 ? 'warn' : 'good';
-      return `<tr>
-        <td>${clsName(c.id)}반</td>
-        <td>${nowHTML(g.a)}</td>
-        <td class="clip">${g.a.auto ? (g.next ? esc(lessonName(g.next)) : '진도 끝') : lessonSelect(`data-next="${c.id}"`, c.next_lesson, planOf(c).length ? '진도 끝' : '—')}</td>
-        <td>${g.need}</td>
-        <td>${g.left}</td>
-        <td class="nd-${tone}">${g.spare > 0 ? '+' : ''}${g.spare}</td>
-        <td>${memoInput(`data-cmemo="${c.id}"`, c.progress_memo)}</td>
-      </tr>`;
-    }).join('')}</tbody></table>`;
+  return classes.map((c) => {
+    const g = progressOf(c);
+    const p = planOf(c);
+    const dots = p.map((l, i) => {
+      const st = i < g.a.nextIdx ? 'done' : i === g.a.nextIdx ? 'next' : '';
+      return `<i class="pg-dot ${st}" title="${esc(l.code)} ${esc(l.title ?? '')}"></i>`;
+    }).join('');
+    const tone = g.spare < 0 ? 'bad' : g.spare <= 1 ? 'warn' : 'good';
+    const spare = g.spare < 0 ? `${-g.spare}시간 모자람` : `여유 ${g.spare}`;
+    const next = g.a.auto
+      ? (g.next ? `<b class="num">${esc(g.next)}</b> <span class="muted">${esc(lessons.find((l) => l.code === g.next)?.title ?? '')}</span>` : '<span class="muted">진도 끝</span>')
+      : lessonSelect(`data-next="${c.id}"`, c.next_lesson, p.length ? '진도 끝' : '—');
+    return `<div class="pg-row">
+      <b class="pg-cls num">${clsName(c.id)}반</b>
+      <div class="pg-dots" role="img" aria-label="${clsName(c.id)}반 ${p.length}차시 중 ${Math.min(g.a.nextIdx, p.length)}차시 끝남">${dots}</div>
+      <div class="pg-next clip">${next}</div>
+      <div class="pg-spare"><b class="nd-${tone}">${spare}</b><small class="muted num">남은 차시 ${g.need} · 수업 ${g.left}</small></div>
+      <div class="pg-memo">${memoInput(`data-cmemo="${c.id}"`, c.progress_memo)}</div>
+    </div>`;
+  }).join('') || '<p class="muted" style="margin:0">반이 없어요</p>';
 }
 
 // 날마다 ⋯ 메뉴: 그날 모두 같은 구분으로 · 다른 요일 시간표로
@@ -231,23 +203,45 @@ function dayMenu(day, has) {
   return `<details class="nd-menu"><summary aria-label="${md(day)} 바꾸기">⋯</summary><div class="nd-menu-list">${kinds}${wds}</div></details>`;
 }
 
+// 주간: 요일 카드 5장. 수업 하나 = 한 줄(교시 · 반 · 차시), 누르면 구분·차시·메모를 고친다
+function slotHTML(r, plans, today) {
+  const next = plans.get(r.class_id)?.get(r.id);
+  const planned = !r.lesson_code && r.kind === '수업' && r.day >= today && next;
+  const tag = r.kind !== '수업' ? `<span class="pg-tag k">${esc(r.kind)}</span>`
+    : r.lesson_code ? `<span class="pg-tag">${esc(r.lesson_code)}</span>`
+    : planned ? `<span class="pg-tag plan" title="예정">${esc(next)}</span>` : '';
+  return `<details class="pg-slot">
+    <summary><span class="num muted">${r.period}교시</span><b class="num">${clsName(r.class_id)}반</b>${tag}</summary>
+    <div class="pg-slot-edit">
+      ${kindSelect(`data-day-kind="${r.id}"`, r.kind)}
+      ${lessonSelect(`data-day-lesson="${r.id}"`, r.lesson_code, planned ? `${esc(lessonName(next))} · 예정` : '차시 없음')}
+      ${memoInput(`data-day-memo="${r.id}"`, r.memo)}
+    </div>
+  </details>`;
+}
+
 function weekHTML() {
-  const parts = [];
+  const today = kstDay();
+  const plans = new Map(classes.map((c) => [c.id, plannedOf(c)]));
+  const cards = [];
   for (let i = 0; i < 5; i++) {
     const day = addDays(weekStart, i);
-    const rows = days.filter((r) => r.day === day);
-    const count = KINDS.map((k) => [k, rows.filter((r) => r.kind === k).length]).filter(([, n]) => n).map(([k, n]) => `${k} ${n}`).join(' · ');
-    parts.push(`<tr class="nd-day"><td colspan="4"><b>${Number(day.slice(5, 7))}월 ${Number(day.slice(8, 10))}일 ${WD[wdOf(day)]}</b>${count || '수업 없음'}</td>
-      <td><div class="nd-row-acts">${dayMenu(day, rows.length > 0)}</div></td></tr>${dayRowsHTML(rows)}`);
+    const rows = days.filter((r) => r.day === day).sort((a, b) => a.period - b.period);
+    const memo = [...new Set(rows.filter((r) => r.kind !== '수업' && r.memo).map((r) => r.memo))].join(' · ');
+    cards.push(`<div class="pg-day${day === today ? ' today' : ''}">
+      <div class="pg-day-h"><b class="num">${WD[wdOf(day)]} ${md(day)}${day === today ? ' · 오늘' : ''}</b>${dayMenu(day, rows.length > 0)}</div>
+      ${memo ? `<small class="muted">${esc(memo)}</small>` : ''}
+      ${rows.length ? rows.map((r) => slotHTML(r, plans, today)).join('') : '<p class="pg-none">수업 없음</p>'}
+    </div>`);
   }
-  return `<table class="nd-table">${DAY_HEAD}<tbody>${parts.join('')}</tbody></table>`;
+  return cards.join('');
 }
 
 function renderView() {
-  panel.querySelectorAll('[data-pg-view]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.pgView === view)));
-  $('pg-week-bar').classList.toggle('hidden', view !== 'week');
-  $('pg-this').textContent = `${md(weekStart)} ~ ${md(addDays(weekStart, 4))}`;
-  $('pg-view').innerHTML = view === 'classes' ? classesHTML() : view === 'week' ? weekHTML() : todayHTML();
+  $('pg-range').textContent = `${md(weekStart)} ~ ${md(addDays(weekStart, 4))}`;
+  $('pg-this').disabled = weekStart === thisWeek();
+  $('pg-classes').innerHTML = classesHTML();
+  $('pg-view').innerHTML = weekHTML();
 }
 
 function renderTimetable() {
@@ -303,7 +297,8 @@ function renderCalendar() {
 function render() {
   const today = kstDay();
   $('pg-deadline').value = deadline;
-  $('pg-today-date').textContent = `${Number(today.slice(5, 7))}월 ${Number(today.slice(8, 10))}일 ${WD[wdOf(today)]}요일 · 수업 ${days.filter((r) => r.day === today && r.kind === '수업').length}개`;
+  const left = new Set(days.filter((r) => r.kind === '수업' && r.day >= today && r.day <= deadline).map((r) => r.day)).size;
+  $('pg-today-date').innerHTML = `오늘 수업 ${days.filter((r) => r.day === today && r.kind === '수업').length}개 · <b>마감까지 수업일 ${left}일</b>`;
   renderView();
   renderCalendar();
   renderTimetable();
@@ -353,7 +348,7 @@ panel.addEventListener('change', (e) => {
 
 $('pg-prev').addEventListener('click', () => { weekStart = addDays(weekStart, -7); reload(); });
 $('pg-next').addEventListener('click', () => { weekStart = addDays(weekStart, 7); reload(); });
-$('pg-this').addEventListener('click', () => { weekStart = monday(kstDay()); reload(); });
+$('pg-this').addEventListener('click', () => { weekStart = thisWeek(); reload(); });
 
 $('pg-make').addEventListener('click', () => {
   const from = $('pg-from').value;
@@ -386,10 +381,9 @@ panel.addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
   const d = b.dataset;
-  if (d.pgView) {
-    view = d.pgView;
-    try { localStorage.setItem('pgView', view); } catch {}
-    renderView();
+  if (b.id === 'pg-set-open') {
+    $('pg-more').open = true;
+    $('pg-more').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } else if (d.allKind) {
     b.closest('details')?.removeAttribute('open');
     const day = d.allKind;

@@ -3490,3 +3490,199 @@ html.stu .ws-dot.is-bad { background: rgba(255,122,69,.16); color: #A23B0B; }
 html.stu .ws-dot.is-closed { color: #8A8A8A; opacity: 1; }
 html.stu .ws-dot.is-checking { box-shadow: inset 0 0 0 1.5px #BDBDBD; }
 html.stu .ws-dot.on, html.stu .ws-dot.on.is-done { background: rgba(13,13,13,.85); color: #fff; box-shadow: none; }
+
+/* ===== 관리 화면 새 틀 (2026-11-22 메뉴 정리 · 화면 다시 짜기, 디자인 캔버스 '관리 화면 새 설계')
+   위 칸 4개(수업·학생·점수·설정) → 묶음 안 왼쪽 목록(#subnav) → 오른쪽 화면.
+   화면마다 같은 틀: 큰 제목 · 반 고르기 줄(고른 반 = 검정) · 연회색 상자 안 흰 표. 줄 끝 단추는 하나, 나머지는 ⋯ 안 ===== */
+body.admin .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+body.admin .side-ic:empty { display: none; }
+
+/* 위 칸 */
+.tn-tab { position: relative; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 999px; color: #5D5D5D; font-size: 16px; font-weight: 700; text-decoration: none; }
+.tn-tab:hover { color: #0D0D0D; background: #F4F4F4; }
+.tn-tab[aria-current="page"] { background: #F0F0F0; color: #0D0D0D; font-weight: 900; }
+.tn-badge, body.admin .wait { font-style: normal; font-size: 12px; font-weight: 900; line-height: 1; padding: 5px 8px; border-radius: 999px; background: rgba(255,196,77,.22); color: #8A5300; font-variant-numeric: tabular-nums; }
+body.admin .wait:empty { display: none; }
+.tn-ghost svg { width: 13px; height: 13px; }
+.tn-acct { position: relative; }
+.tn-acct-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 32; min-width: 220px; padding: 8px; border-radius: 20px; background: #fff; box-shadow: 0 12px 40px rgba(0,0,0,.12), 0 0 0 1px rgba(0,0,0,.05); display: flex; flex-direction: column; }
+.tn-acct-menu[hidden] { display: none; }
+.tn-acct-menu > a, .tn-acct-menu > button { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 14px; border: 0; border-radius: 12px; background: none; font: inherit; font-size: 15px; font-weight: 700; color: #0D0D0D; text-decoration: none; text-align: left; cursor: pointer; }
+.tn-acct-menu > a:hover, .tn-acct-menu > button:hover { background: #F4F4F4; }
+.tn-acct-menu > a svg { width: 13px; height: 13px; color: #707070; }
+.tn-acct-menu hr { border: 0; height: 1px; background: #EEEEEE; margin: 6px 8px; }
+.tn-acct-menu [data-logout] { color: #5D5D5D; }
+
+/* 본문: 왼쪽 목록 + 화면 */
+body.admin .admin-body { display: flex; gap: 40px; align-items: flex-start; }
+body.admin .admin-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+body.admin .subnav { display: none; }
+body.admin.has-sub .subnav { display: flex; flex-direction: column; gap: 4px; flex: 0 0 200px; position: sticky; top: 96px; }
+body.admin .sn-link { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 14px; color: #5D5D5D; font-weight: 700; font-size: 15px; text-decoration: none; }
+body.admin .sn-link:hover { background: #F4F4F4; color: #0D0D0D; }
+body.admin .sn-link[aria-current="page"] { background: #F0F0F0; color: #0D0D0D; font-weight: 900; }
+body.admin .sn-link .side-ext svg { width: 13px; height: 13px; }
+body.admin .sn-link .side-badge { font-style: normal; font-size: 12px; font-weight: 900; padding: 4px 8px; border-radius: 999px; background: rgba(255,196,77,.22); color: #8A5300; }
+body.admin .admin-top .admin-title h1 { margin-bottom: 4px; }
+@media (max-width: 960px) {
+  body.admin .admin-body { flex-direction: column; gap: 12px; }
+  body.admin.has-sub .subnav { position: static; flex: none; flex-direction: row; overflow-x: auto; width: 100%; }
+  body.admin .sn-link { flex: none; }
+}
+
+/* 공통 부품 */
+body.admin .panel > .box, body.admin .panel > form.box, body.admin .panel > details.box { background: #F7F7F7; border-radius: 28px; padding: 24px 28px; display: flex; flex-direction: column; gap: 14px; }
+body.admin .box-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+body.admin .box-head h2 { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+body.admin .box-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+body.admin .box-in { background: #fff; border-radius: 20px; padding: 8px 16px; }
+body.admin .sm { font-size: 14px; font-weight: 500; }
+body.admin .box > p.sm { margin: 0; }
+body.admin .btn-ghost { background: transparent; border: 0; color: #5D5D5D; }
+body.admin .btn-ghost:hover { background: #ECECEC; color: #0D0D0D; }
+body.admin .box .btn-line { background: #fff; }
+body.admin .box .btn-line:hover { background: #ECECEC; }
+body.admin .icon-only { width: 40px; padding: 0 !important; justify-content: center; }
+body.admin .btn-big { min-height: 48px; padding: 0 28px; font-size: 16px; font-weight: 700; }
+body.admin details.fold > summary { cursor: pointer; font-weight: 700; min-height: 32px; display: flex; align-items: center; }
+
+/* 반 고르기 줄 */
+body.admin .seg-tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px; border-radius: 999px; background: #F7F7F7; align-self: flex-start; }
+body.admin .box .seg-tabs { background: #fff; }
+body.admin .seg { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: #5D5D5D; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+body.admin .seg:hover { color: #0D0D0D; }
+body.admin .seg.on { background: #0D0D0D; color: #fff; }
+body.admin .seg small { font-size: 13px; font-weight: 500; opacity: .7; }
+
+/* 표 */
+body.admin .tbl-wrap { overflow-x: auto; }
+body.admin .tbl { width: 100%; border-collapse: collapse; font-size: 15px; }
+body.admin .tbl th { padding: 10px 12px; text-align: left; font-size: 13px; font-weight: 500; color: #707070; white-space: nowrap; }
+body.admin .tbl td { padding: 8px 12px; border-top: 1px solid #EEEEEE; vertical-align: middle; }
+body.admin .tbl .r { text-align: right; }
+body.admin .tbl .b { font-weight: 700; }
+body.admin .tbl .ck { width: 36px; }
+body.admin .tbl input[type="checkbox"] { width: 20px; height: 20px; accent-color: #0D0D0D; cursor: pointer; }
+body.admin .tbl tr.pick td { background: #F6F6F6; }
+body.admin .tbl tr.off td { color: #8A8A8A; }
+body.admin .tbl .minus { color: #A23B0B; }
+
+/* ⋯ 메뉴 */
+body.admin .more-menu { position: relative; display: inline-block; }
+body.admin .more-menu > summary { list-style: none; cursor: pointer; }
+body.admin .more-menu > summary::-webkit-details-marker { display: none; }
+body.admin .more-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 200px; padding: 6px; border-radius: 16px; background: #fff; box-shadow: 0 12px 36px rgba(0,0,0,.14), 0 0 0 1px rgba(0,0,0,.05); display: flex; flex-direction: column; }
+body.admin .more-list button { min-height: 42px; padding: 0 14px; border: 0; border-radius: 10px; background: none; font: inherit; font-size: 14.5px; font-weight: 700; color: #0D0D0D; text-align: left; cursor: pointer; white-space: nowrap; }
+body.admin .more-list button:hover { background: #F4F4F4; }
+body.admin .more-list button:disabled { color: #8A8A8A; cursor: default; background: none; }
+body.admin .more-list .danger { color: #A23B0B; }
+
+/* 신청 줄(닉네임·구매) · 기록 줄 */
+body.admin .req-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 8px; }
+body.admin .req-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #fff; border-radius: 18px; padding: 10px 10px 10px 18px; }
+body.admin .req-old { color: #707070; }
+body.admin .req-arrow { color: #8A8A8A; flex: none; }
+body.admin .req-new { flex: 1 1 auto; }
+body.admin .req-btns { display: flex; gap: 6px; margin-left: auto; }
+body.admin .log-list { display: flex; flex-direction: column; }
+body.admin .log-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 4px; border-top: 1px solid #EEEEEE; font-size: 15px; }
+body.admin .log-row:first-child { border-top: 0; }
+body.admin .log-row .grow { flex: 1 1 200px; min-width: 0; }
+
+/* 학생 명단 */
+body.admin .stu-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+body.admin .stu-lock { display: flex; align-items: center; gap: 12px; font-weight: 700; }
+body.admin .stu-lock .switch { margin-left: 0; }
+body.admin .stu-lock .is-locked { color: #A23B0B; }
+body.admin .lock-note { margin: 0; padding: 14px 20px; border-radius: 20px; background: rgba(255,122,69,.16); color: #A23B0B; font-weight: 700; }
+body.admin .nick-edit { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+body.admin .nick-edit .input { width: 180px; height: 38px; background: #F7F7F7; border: 0; font-weight: 700; }
+body.admin .nick-edit .input::placeholder { color: #8A8A8A; font-weight: 500; }
+body.admin .nick-edit .input:focus { background: #fff; box-shadow: inset 0 0 0 2px #0D0D0D; }
+body.admin .req-tag { font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: rgba(255,196,77,.22); color: #8A5300; }
+body.admin .code-dots { letter-spacing: .12em; color: #5D5D5D; }
+body.admin .roster-size-grid { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+
+/* 학생별 점수: 아래 주기 줄 */
+body.admin .give-bar { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; background: #fff; border-radius: 20px; padding: 16px 20px; }
+body.admin .give-n { margin: 0; align-self: center; min-width: 88px; color: #5D5D5D; }
+body.admin .give-n b { font-size: 20px; color: #0D0D0D; }
+body.admin .give-f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #5D5D5D; }
+body.admin .give-f .input { height: 44px; background: #F7F7F7; border: 0; font-weight: 700; font-size: 16px; }
+body.admin .give-f.num-f .input { width: 100px; }
+body.admin .give-f.grow { flex: 1 1 220px; }
+
+/* 진도 */
+body.admin .pg-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+body.admin .pg-sub { margin: 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: #5D5D5D; font-size: 16px; }
+body.admin .pg-sub label { display: inline-flex; align-items: center; gap: 4px; }
+body.admin .pg-sub b { color: #0D0D0D; }
+body.admin .pg-legend { display: flex; gap: 16px; font-size: 13px; color: #5D5D5D; }
+body.admin .pg-legend span { display: inline-flex; align-items: center; gap: 6px; }
+body.admin .pg-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #DADADA; flex: none; }
+body.admin .pg-dot.done { background: #22C582; }
+body.admin .pg-dot.next { background: #fff; box-shadow: inset 0 0 0 2px #0D0D0D; }
+body.admin .pg-classes { overflow-x: auto; }
+body.admin .pg-row { display: grid; grid-template-columns: 56px minmax(180px, 1.2fr) minmax(160px, 1fr) 150px minmax(120px, .8fr); align-items: center; gap: 16px; padding: 12px 4px; border-top: 1px solid #EEEEEE; min-width: 760px; }
+body.admin .pg-row:first-child { border-top: 0; }
+body.admin .pg-dots { display: flex; gap: 6px; flex-wrap: wrap; }
+body.admin .pg-next { font-size: 15px; }
+body.admin .pg-next.clip { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.admin .pg-spare { display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+body.admin .pg-spare small { font-size: 12.5px; }
+body.admin .pg-spare .nd-bad { color: #A23B0B; }
+body.admin .pg-spare .nd-warn { color: #8A5300; }
+body.admin .pg-spare .nd-good { color: #0B6B47; }
+body.admin .pg-week { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+body.admin .pg-day { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 20px; background: #EFEFEF; min-width: 0; }
+body.admin .pg-day.today { box-shadow: inset 0 0 0 2px #8A8A8A; }
+body.admin .pg-day-h { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 4px; font-size: 15px; }
+body.admin .pg-day > small { padding: 0 4px; }
+body.admin .pg-none { margin: 0; padding: 8px 4px; color: #707070; font-size: 14px; }
+body.admin .pg-slot { background: #fff; border-radius: 14px; }
+body.admin .pg-slot > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; list-style: none; cursor: pointer; font-size: 14px; white-space: nowrap; }
+body.admin .pg-slot > summary::-webkit-details-marker { display: none; }
+body.admin .pg-slot > summary b { flex: 1 1 auto; }
+body.admin .pg-slot[open] > summary { border-bottom: 1px solid #EEEEEE; }
+body.admin .pg-tag { flex: none; font-size: 13px; font-weight: 900; padding: 3px 8px; border-radius: 999px; background: #F0F0F0; font-variant-numeric: tabular-nums; }
+body.admin .pg-tag.plan { background: none; box-shadow: inset 0 0 0 1.5px #BDBDBD; color: #5D5D5D; font-weight: 700; }
+body.admin .pg-tag.k { background: rgba(255,122,69,.16); color: #A23B0B; }
+body.admin .pg-slot-edit { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px 10px; }
+body.admin .pg-slot-edit select, body.admin .pg-slot-edit input { width: 100%; }
+body.admin .panel.pg > .nd-more { background: #F7F7F7; border-radius: 28px; padding: 24px 28px; }
+
+/* 상점 */
+body.admin .rw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 8px; }
+body.admin .rw-row { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 18px; padding: 8px 14px; }
+body.admin .rw-row > .input { flex: 1 1 auto; min-width: 0; height: 40px; border: 0; background: transparent; font-weight: 700; font-size: 15px; }
+body.admin .rw-cost { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #5D5D5D; }
+body.admin .rw-cost .input { width: 84px; height: 40px; border: 0; background: #F7F7F7; font-weight: 900; text-align: right; }
+body.admin .rw-on { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+body.admin .rw-on input { width: 20px; height: 20px; accent-color: #0D0D0D; }
+body.admin .rw-on.big { justify-content: space-between; min-height: 44px; font-size: 15px; }
+body.admin .shop-wrap { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+body.admin .shop-grid { flex: 999 1 420px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+body.admin .shop-card { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; border: 0; border-radius: 20px; background: #fff; font: inherit; color: #0D0D0D; text-align: left; cursor: pointer; }
+body.admin .shop-card:hover { box-shadow: inset 0 0 0 1px #D6D6D6; }
+body.admin .shop-card.on { box-shadow: inset 0 0 0 2px #0D0D0D; }
+body.admin .shop-card.off .shop-thumb { opacity: .45; }
+body.admin .shop-card b { font-size: 15px; }
+body.admin .shop-thumb { width: 100%; aspect-ratio: 1 / 1; border-radius: 14px; background: #F4F4F4; display: grid; place-items: center; overflow: hidden; }
+body.admin .shop-thumb svg { width: 80%; height: 80%; }
+body.admin .shop-thumb.sm { width: 56px; flex: none; }
+body.admin .shop-noimg { font-size: 12px; color: #707070; }
+body.admin .shop-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; font-weight: 700; }
+body.admin .rar { font-size: 12px; font-weight: 900; padding: 3px 8px; border-radius: 999px; }
+body.admin .rar-rare { background: rgba(36,87,230,.12); color: #1D47BF; }
+body.admin .rar-legend { background: rgba(214,158,46,.2); color: #7A5400; }
+body.admin .shop-edit { flex: 1 1 260px; position: sticky; top: 96px; background: #fff; border-radius: 22px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+body.admin .shop-edit:empty { display: none; }
+body.admin .shop-edit-h { display: flex; align-items: center; gap: 12px; }
+body.admin .shop-edit-h b { font-size: 18px; display: block; }
+body.admin .shop-edit-h small { color: #5D5D5D; }
+body.admin .shop-fields { display: flex; flex-direction: column; gap: 12px; }
+body.admin .shop-fields .input { height: 44px; background: #F7F7F7; border: 0; font-weight: 700; }
+body.admin .nick-edit button[hidden] { display: none; }
+body.admin .pg-row { grid-template-columns: 56px minmax(230px, 1.3fr) minmax(160px, 1fr) 150px minmax(120px, .8fr); }
+body.admin .pg-dots { gap: 5px; flex-wrap: nowrap; }
+body.admin .pg-dots .pg-dot { width: 13px; height: 13px; }

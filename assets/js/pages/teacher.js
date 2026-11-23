@@ -15,6 +15,7 @@ import {
   getAwayStats,
 } from '../db.js';
 import { PARTS, SLOTS, SLOT_NAMES } from '../avatar-parts.js';
+import { avatarSVG, normalize } from '../avatar.js';
 import { teacherGate, errMsg } from '../gate.js';
 import { parseWorksheet, renderPage, closeSims, simHref, TYPE_NAME } from '../worksheet.js';
 import { refreshMats } from './teacher-mats.js';
@@ -354,15 +355,20 @@ editForm.addEventListener('submit', async (e) => {
 
 /* ---------- 명단 ---------- */
 let rosterClass = TEACHER_CLASSES[0];
+try { const v = Number(localStorage.getItem('nickClass')); if (TEACHER_CLASSES.includes(v)) rosterClass = v; } catch {}
 
 let codesShown = false; // 프로젝터에 비칠 수 있어 평소엔 가림
+// 반 고르기 줄 (학생 명단·학생별 점수 공통 모양: 고른 반 = 검정)
+function segTabs(cur, attr, counts) {
+  return TEACHER_CLASSES.map((n) => `
+    <button type="button" role="tab" class="seg${n === cur ? ' on' : ''}" aria-selected="${n === cur}" ${attr}="${n}">${clsName(n)}반${counts ? ` <small class="num">${counts.get(n)}</small>` : ''}</button>`).join('');
+}
+
 function renderRoster() {
   const counts = new Map(TEACHER_CLASSES.map((n) => [n, 0]));
   for (const s of students) if (s.active) counts.set(s.class_id, (counts.get(s.class_id) || 0) + 1);
-  $('roster-tabs').innerHTML = TEACHER_CLASSES.map((n) => `
-    <button type="button" role="tab" class="cls-tab press${n === rosterClass ? ' on' : ''}" aria-selected="${n === rosterClass}" data-tab="${n}">
-      ${clsName(n)}반 <span class="num">${counts.get(n)}</span>
-    </button>`).join('');
+  $('roster-tabs').innerHTML = segTabs(rosterClass, 'data-tab', counts);
+  $('roster-cls').textContent = `${clsName(rosterClass)}반`;
 
   const list = students.filter((s) => s.class_id === rosterClass)
     .sort((a, b) => (b.active - a.active) || (a.number - b.number));
@@ -375,19 +381,30 @@ function renderRoster() {
   $('codes-toggle').disabled = !active.some((s) => s.has_code);
   $('codes-sheet').disabled = !active.some((s) => s.code);
 
-  $('roster-list').innerHTML = list.length ? list.map((s) => `
-    <div class="roster-row${s.active ? '' : ' off'}" data-sid="${s.id}">
-      <b class="num">${s.number}번</b>
-      ${s.active
-        ? `<span class="tag ${s.has_code ? 'tag-today' : 'tag-warn'}">${s.has_code ? '코드 있음' : '코드 없음'}</span>
-           ${s.has_code ? `<span class="roster-code num${s.code ? '' : ' muted'}">${codesShown ? (s.code || '모름') : '••••••'}</span>` : ''}
-           <span class="roster-btns">
-             <button type="button" class="btn btn-line btn-small" data-reset>코드 다시 발급</button>
-             <button type="button" class="btn btn-danger btn-small" data-off>빼기</button>
-           </span>`
-        : `<span class="tag tag-off">명단에서 뺌</span>
-           <span class="roster-btns"><button type="button" class="btn btn-line btn-small" data-on>되살리기</button></span>`}
-    </div>`).join('') : '<div class="empty"><strong>명단이 없어요</strong></div>';
+  const nickOf = new Map(nickAll.map((x) => [x.id, x]));
+  $('roster-list').innerHTML = list.length ? list.map((s) => {
+    const n = nickOf.get(s.id);
+    const nick = n
+      ? `<form class="nick-edit" data-nsid="${s.id}">
+          <input class="input" name="nick" maxlength="8" value="${esc(n.nickname ?? '')}" placeholder="닉네임 미정" aria-label="${s.number}번 닉네임" autocomplete="off">
+          ${n.nickname_status === 'pending' && n.nickname_request ? `<span class="req-tag">신청: ${esc(n.nickname_request)}</span>` : ''}
+          <button type="submit" class="btn btn-primary btn-small" hidden>저장</button>
+        </form>`
+      : `<span class="muted">${s.active ? '…' : '명단에서 뺌'}</span>`;
+    const code = !s.active ? ''
+      : s.has_code ? `<span class="code-dots num${s.code || !codesShown ? '' : ' muted'}">${codesShown ? esc(s.code || '모름') : '••••••'}</span>`
+      : '<span class="tag tag-warn">코드 없음</span>';
+    const menu = s.active
+      ? '<button type="button" data-reset>코드 다시 발급</button><button type="button" class="danger" data-off>명단에서 빼기</button>'
+      : '<button type="button" data-on>되살리기</button>';
+    return `<tr class="${s.active ? '' : 'off'}" data-sid="${s.id}">
+      <td class="num b">${s.number}번</td>
+      <td>${nick}</td>
+      <td>${code}</td>
+      <td class="r"><details class="more-menu row-menu"><summary class="btn btn-ghost icon-only" aria-label="${s.number}번 더 보기"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><circle cx="4" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="14" cy="9" r="1.5"/></svg></summary><div class="more-list">${menu}</div></details></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="4" class="muted">명단이 없어요</td></tr>';
+  renderLocks();
   updateHub();
 }
 
@@ -503,13 +520,16 @@ $('roster-tabs').addEventListener('click', (e) => {
   const tab = e.target.closest('[data-tab]');
   if (!tab) return;
   rosterClass = Number(tab.dataset.tab);
+  try { localStorage.setItem('nickClass', String(rosterClass)); } catch {}
   renderRoster();
   renderSignup();
+  refreshNickAll().catch((err) => toast(errMsg(err), 'error'));
 });
 
 $('roster-list').addEventListener('click', async (e) => {
   const row = e.target.closest('[data-sid]');
-  if (!row) return;
+  if (!row || !e.target.closest('[data-reset], [data-off], [data-on]')) return;
+  e.target.closest('details')?.removeAttribute('open');
   const s = students.find((x) => x.id === row.dataset.sid);
   if (!s) return;
   const label = `${clsName(s.class_id)}반 ${s.number}번`;
@@ -620,16 +640,18 @@ let nickReqs = [];
 
 function renderNicks() {
   $('nick-count').textContent = nickReqs.length ? String(nickReqs.length) : '';
-  $('nick-list').innerHTML = nickReqs.length ? nickReqs.map((s) => `
-    <div class="nick-row" data-nid="${s.id}">
+  $('nick-box').classList.toggle('hidden', !nickReqs.length);
+  $('nick-list').innerHTML = nickReqs.map((s) => `
+    <div class="req-row" data-nid="${s.id}">
       <b class="num">${clsName(s.class_id)}반 ${s.number}번</b>
-      <span class="new">${esc(s.nickname_request)}</span>
-      ${s.nickname ? `<span class="old">지금: ${esc(s.nickname)}</span>` : ''}
-      <span class="roster-btns">
-        <button type="button" class="btn btn-pass btn-small" data-approve>승인</button>
-        <button type="button" class="btn btn-danger btn-small" data-reject>거절</button>
+      <span class="req-old">${s.nickname ? esc(s.nickname) : '닉네임 미정'}</span>
+      <svg class="req-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 7h10M8 3l4 4-4 4"/></svg>
+      <b class="req-new">${esc(s.nickname_request)}</b>
+      <span class="req-btns">
+        <button type="button" class="btn btn-ghost btn-small" data-reject>거절</button>
+        <button type="button" class="btn btn-primary btn-small" data-approve>승인</button>
       </span>
-    </div>`).join('') : '<p class="muted" style="margin:0">기다리는 신청이 없어요</p>';
+    </div>`).join('');
   updateHub();
 }
 
@@ -637,8 +659,6 @@ async function refreshNicks() {
   nickReqs = await listNicknameRequests();
   renderNicks();
 }
-
-$('nick-refresh').addEventListener('click', () => refreshNicks().catch((err) => toast(errMsg(err), 'error')));
 
 $('nick-list').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-approve], [data-reject]');
@@ -656,54 +676,31 @@ $('nick-list').addEventListener('click', async (e) => {
   }
 });
 
-/* ---------- 반별 닉네임: 번호마다 닉네임을 보고 바로 고침 ---------- */
-let nickClass = TEACHER_CLASSES[0];
-try { nickClass = Number(localStorage.getItem('nickClass')) || nickClass; } catch {}
-if (!TEACHER_CLASSES.includes(nickClass)) nickClass = TEACHER_CLASSES[0];
+/* ---------- 닉네임 바로 고침: 학생 명단 표의 닉네임 칸 ---------- */
 let nickAll = [];
 
-$('nick-class').innerHTML = TEACHER_CLASSES.map((n) => `<option value="${n}">${clsName(n)}반</option>`).join('');
-$('nick-class').value = String(nickClass);
-$('nick-class').addEventListener('change', () => {
-  nickClass = Number($('nick-class').value);
-  try { localStorage.setItem('nickClass', String(nickClass)); } catch {}
-  refreshNickAll().catch((err) => toast(errMsg(err), 'error'));
-});
-
-function renderNickAll() {
-  const named = nickAll.filter((s) => s.nickname).length;
-  $('nick-all-count').textContent = nickAll.length ? `${named} / ${nickAll.length}` : '';
-  $('nick-all').innerHTML = nickAll.length ? nickAll.map((s) => `
-    <form class="nick-row nick-edit" data-sid="${s.id}">
-      <b class="num">${s.number}번</b>
-      <input class="input" name="nick" maxlength="8" value="${esc(s.nickname ?? '')}" placeholder="닉네임 미정" aria-label="${s.number}번 닉네임" autocomplete="off">
-      ${s.nickname_status === 'pending' && s.nickname_request ? `<span class="req">신청 중: ${esc(s.nickname_request)}</span>` : ''}
-      <button type="submit" class="btn btn-primary btn-small" disabled>저장</button>
-    </form>`).join('') : '<p class="muted" style="margin:0">명단이 없어요</p>';
-}
-
 async function refreshNickAll() {
-  const cls = nickClass;
+  const cls = rosterClass;
   const rows = await listNicknames(cls);
-  if (cls !== nickClass) return;
-  nickAll = rows;
-  renderNickAll();
+  if (cls !== rosterClass) return;
+  nickAll = rows.map((r) => ({ ...r, class_id: cls }));
+  renderRoster();
 }
 
-$('nick-all').addEventListener('input', (e) => {
-  const form = e.target.closest('form');
-  const s = nickAll.find((x) => x.id === form?.dataset.sid);
-  if (s) form.querySelector('button').disabled = e.target.value.trim() === (s.nickname ?? '');
+$('roster-list').addEventListener('input', (e) => {
+  const form = e.target.closest('form[data-nsid]');
+  const s = nickAll.find((x) => x.id === form?.dataset.nsid);
+  if (s) form.querySelector('button').hidden = e.target.value.trim() === (s.nickname ?? '');
 });
 
-$('nick-all').addEventListener('submit', async (e) => {
+$('roster-list').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
-  const s = nickAll.find((x) => x.id === form.dataset.sid);
+  const s = nickAll.find((x) => x.id === form.dataset.nsid);
   const input = form.querySelector('input');
   const btn = form.querySelector('button');
   const nick = input.value.trim();
-  if (!s || btn.disabled) return;
+  if (!s || btn.hidden) return;
   if (nick && (nick.length < 2 || nick.length > 8 || !/^[가-힣A-Za-z0-9]+$/.test(nick))) {
     toast('2~8자, 한글·영문·숫자만 돼요', 'error');
     return;
@@ -713,7 +710,6 @@ $('nick-all').addEventListener('submit', async (e) => {
     const r = await setNickname(s.id, nick);
     if (!r?.ok) {
       toast(r?.error === 'TAKEN' ? '다른 학생이 쓰거나 신청 중인 닉네임이에요' : '2~8자, 한글·영문·숫자만 돼요', 'error');
-      btn.disabled = false;
       return;
     }
     s.nickname = r.nickname;
@@ -723,13 +719,13 @@ $('nick-all').addEventListener('submit', async (e) => {
     }
     s.nickname_status = r.nickname ? 'approved' : 'none';
     s.nickname_request = null;
-    toast(`${s.number}번 ${r.nickname ? `'${r.nickname}'` : '닉네임 지움'}`, 'ok');
-    renderNickAll();
+    const num = students.find((x) => x.id === s.id)?.number ?? s.number;
+    toast(`${num}번 ${r.nickname ? `'${r.nickname}'` : '닉네임 지움'}`, 'ok');
+    renderRoster();
   } catch (err) {
     toast(errMsg(err), 'error');
-    btn.disabled = false;
   } finally {
-    input.disabled = false;
+    btn.disabled = input.disabled = false;
   }
 });
 
@@ -744,24 +740,24 @@ const buyWhat = (p) => esc(p.item?.name ?? p.item_id) +
 function renderBuys() {
   $('buys-count').textContent = buyReqs.length ? String(buyReqs.length) : '';
   $('buys-list').innerHTML = buyReqs.length ? buyReqs.map((p) => `
-    <div class="nick-row" data-bid="${p.id}">
+    <div class="req-row" data-bid="${p.id}">
       <b class="num">${who(p)}</b>
-      <span class="new">${buyWhat(p)}</span>
-      <span class="old num">${p.cost}금화 · ${fmtDate(p.requested_at)}</span>
-      <span class="roster-btns">
-        <button type="button" class="btn btn-pass btn-small" data-approve>승인</button>
-        <button type="button" class="btn btn-danger btn-small" data-reject>거절</button>
+      <b class="req-new">${buyWhat(p)}</b>
+      <span class="req-old num">${p.cost}금화 · ${fmtDate(p.requested_at)}</span>
+      <span class="req-btns">
+        <button type="button" class="btn btn-ghost btn-small" data-reject>거절</button>
+        <button type="button" class="btn btn-primary btn-small" data-approve>승인</button>
       </span>
     </div>`).join('') : '<p class="muted" style="margin:0">기다리는 신청이 없어요</p>';
   $('buys-done').innerHTML = buyDone.length ? buyDone.map((p) => {
     const ok = p.status === 'approved';
     const used = ok && p.item?.kind === 'pair' ? (p.used_board_id ? ' · 사용함' : ' · 아직 안 씀') : '';
     return `
-    <div class="nick-row">
+    <div class="log-row">
+      <span class="num muted">${fmtDate(p.decided_at || p.requested_at)}</span>
       <b class="num">${who(p)}</b>
-      <span>${buyWhat(p)}</span>
-      <span class="old num">${p.cost}금화 · ${fmtDate(p.decided_at || p.requested_at)}</span>
-      <span class="tag ${ok ? 'tag-done' : 'tag-warn'} buy-tag">${ok ? '승인' : '거절 · 금화 돌려줌'}${used}</span>
+      <span class="grow">${buyWhat(p)} <span class="muted num">${p.cost}금화</span></span>
+      <span class="tag ${ok ? 'tag-done' : 'tag-warn'}">${ok ? '승인' : '거절 · 금화 돌려줌'}${used}</span>
     </div>`;
   }).join('') : '<p class="muted" style="margin:0">아직 처리한 신청이 없어요</p>';
   updateHub();
@@ -799,29 +795,56 @@ const RARITY_OPTS = [['common', '일반'], ['rare', '희귀'], ['legend', '전�
 
 function renderRewardsSet() {
   $('set-rewards').innerHTML = rewards.map((r) => `
-    <div class="set-row set-reward" data-rid="${esc(r.id)}">
+    <div class="rw-row" data-rid="${esc(r.id)}">
       <input class="input" data-f="name" value="${esc(r.name)}" maxlength="20" aria-label="보상 이름">
-      <label class="set-num"><input class="input num" type="number" min="0" max="9999" data-f="cost" value="${r.cost}" aria-label="${esc(r.name)} 가격"><span>금화</span></label>
-      <label class="check"><input type="checkbox" data-f="active"${r.active ? ' checked' : ''}> 판매</label>
+      <label class="rw-cost"><input class="input num" type="number" min="0" max="9999" data-f="cost" value="${r.cost}" aria-label="${esc(r.name)} 가격"><span>금화</span></label>
+      <label class="rw-on"><input type="checkbox" data-f="active"${r.active ? ' checked' : ''}> 판매</label>
     </div>`).join('') || '<p class="muted" style="margin:0">보상이 없어요</p>';
 }
+
+// 꾸미기: 칸별 카드(그림 · 이름 · 가격 · 등급), 누르면 오른쪽에서 가격·등급·레벨·판매를 고친다(바꾸면 바로 저장)
+let setPick = null;
+const RARITY_NAME = Object.fromEntries(RARITY_OPTS);
+const thumb = (it, size) => (PARTS[it.slot]?.[it.id]
+  ? avatarSVG(normalize({ [it.slot]: it.id }), size, { label: it.name })
+  : '<span class="shop-noimg">그림 없음</span>');
 
 function renderItemsSet() {
   const slots = SLOTS.filter((sl) => avItems.some((it) => it.slot === sl));
   if (!slots.includes(setSlot)) setSlot = slots[0];
   $('set-slot-tabs').innerHTML = slots.map((sl) => `
-    <button type="button" role="tab" class="cls-tab press${sl === setSlot ? ' on' : ''}" aria-selected="${sl === setSlot}" data-sslot="${sl}">${SLOT_NAMES[sl]}</button>`).join('');
-  $('set-items').innerHTML = avItems.filter((it) => it.slot === setSlot).map((it) => `
-    <div class="set-row set-item" data-aid="${esc(it.id)}">
-      <b class="set-name">${esc(it.name)}${PARTS[it.slot]?.[it.id] ? '' : ' <span class="tag tag-off">그림 없음</span>'}</b>
-      <label class="set-num"><input class="input num" type="number" min="0" max="9999" data-f="price" value="${it.price}" aria-label="${esc(it.name)} 가격"><span>은화</span></label>
-      <select class="input set-sel" data-f="rarity" aria-label="${esc(it.name)} 등급">
-        ${RARITY_OPTS.map(([v, t]) => `<option value="${v}"${it.rarity === v ? ' selected' : ''}>${t}</option>`).join('')}
-      </select>
-      <label class="set-num"><span>Lv.</span><input class="input num" type="number" min="1" max="99" data-f="min_level" value="${it.min_level}" aria-label="${esc(it.name)} 레벨 조건"></label>
-      <label class="check"><input type="checkbox" data-f="active"${it.active ? ' checked' : ''}> 판매</label>
-    </div>`).join('');
+    <button type="button" role="tab" class="seg${sl === setSlot ? ' on' : ''}" aria-selected="${sl === setSlot}" data-sslot="${sl}">${SLOT_NAMES[sl]}</button>`).join('');
+  const list = avItems.filter((it) => it.slot === setSlot);
+  if (!list.some((it) => it.id === setPick)) setPick = list[0]?.id ?? null;
+  $('set-items').innerHTML = list.map((it) => `
+    <button type="button" class="shop-card${it.id === setPick ? ' on' : ''}${it.active ? '' : ' off'}" data-pick="${esc(it.id)}" aria-pressed="${it.id === setPick}">
+      <span class="shop-thumb">${thumb(it, 96)}</span>
+      <b>${esc(it.name)}</b>
+      <span class="shop-meta"><span class="num">${it.price ? `${it.price} 은화` : '무료'}</span>${
+        it.rarity !== 'common' ? `<span class="rar rar-${it.rarity}">${RARITY_NAME[it.rarity] ?? ''}</span>` : ''}${
+        it.min_level > 1 ? `<span class="muted num">Lv.${it.min_level}</span>` : ''}${
+        it.active ? '' : '<span class="tag tag-off">안 팖</span>'}</span>
+    </button>`).join('');
+  const it = list.find((x) => x.id === setPick);
+  $('set-edit').innerHTML = it ? `
+    <div class="shop-edit-h" data-aid="${esc(it.id)}"><span class="shop-thumb sm">${thumb(it, 56)}</span><div><b>${esc(it.name)}</b><small>${SLOT_NAMES[it.slot]}</small></div></div>
+    <div class="shop-fields" data-aid="${esc(it.id)}">
+      <label class="field"><span>가격 (은화, 0 = 기본 부품)</span><input class="input num" type="number" min="0" max="9999" data-f="price" value="${it.price}"></label>
+      <div class="grid-2">
+        <label class="field"><span>등급</span><select class="input" data-f="rarity">${RARITY_OPTS.map(([v, t]) => `<option value="${v}"${it.rarity === v ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+        <label class="field"><span>레벨부터</span><input class="input num" type="number" min="1" max="99" data-f="min_level" value="${it.min_level}"></label>
+      </div>
+      <label class="rw-on big"><input type="checkbox" data-f="active"${it.active ? ' checked' : ''}> 판매</label>
+    </div>` : '';
 }
+
+$('set-items').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-pick]');
+  if (!b) return;
+  setPick = b.dataset.pick;
+  renderItemsSet();
+});
+$('set-edit').addEventListener('submit', (e) => e.preventDefault());
 
 async function refreshShopSet() {
   [avItems, rewards] = await Promise.all([listAvatarItems(), listShopItems()]);
@@ -871,9 +894,10 @@ $('set-rewards').addEventListener('change', async (e) => {
   if (!e.target.dataset.f) return;
   if (await saveField(e.target, rewards, 'data-rid', updateShopItem) === 'reset') renderRewardsSet();
 });
-$('set-items').addEventListener('change', async (e) => {
+$('set-edit').addEventListener('change', async (e) => {
   if (!e.target.dataset.f) return;
-  if (await saveField(e.target, avItems, 'data-aid', updateAvatarItem) === 'reset') renderItemsSet();
+  await saveField(e.target, avItems, 'data-aid', updateAvatarItem);
+  renderItemsSet();
 });
 
 /* ---------- 점수 주기: 고른 학생에게 XP·금화 (음수면 빼기) ---------- */
@@ -886,14 +910,37 @@ function grantRoster() {
   return students.filter((s) => s.class_id === grantClass && s.active);
 }
 
+// 학생별 점수: 반 표(금화·은화·레벨)에서 체크로 고르고, 아래 줄에서 XP·금화를 준다
 function renderGrant() {
-  $('grant-tabs').innerHTML = TEACHER_CLASSES.map((n) => `
-    <button type="button" role="tab" class="cls-tab press${n === grantClass ? ' on' : ''}" aria-selected="${n === grantClass}" data-gcls="${n}">${clsName(n)}반</button>`).join('');
+  $('grant-tabs').innerHTML = segTabs(grantClass, 'data-gcls');
   const list = grantRoster();
-  $('grant-roll').innerHTML = list.length ? list.map((s) => `
-    <button type="button" class="roll-chip num${grantPick.has(s.id) ? ' on' : ''}" aria-pressed="${grantPick.has(s.id)}" data-gsid="${s.id}">${s.number}</button>`).join('')
-    : '<p class="muted" style="margin:0">명단이 없어요</p>';
-  $('grant-count').textContent = grantPick.size ? `${grantPick.size}명 고름` : '';
+  const coinOf = new Map(coinRows.filter((r) => r.class_id === grantClass).map((r) => [r.id, r]));
+  $('grant-roll').innerHTML = list.length ? list.map((s) => {
+    const c = coinOf.get(s.id);
+    const on = grantPick.has(s.id);
+    const cell = (v) => (c ? v : '');
+    return `<tr class="${on ? 'pick' : ''}">
+      <td class="ck"><input type="checkbox" data-gsid="${s.id}"${on ? ' checked' : ''} aria-label="${s.number}번 고르기"></td>
+      <td class="num b">${s.number}번</td>
+      <td>${c?.nickname ? `<b>${esc(c.nickname)}</b>` : '<span class="muted">닉네임 미정</span>'}</td>
+      <td class="num muted">${cell(`Lv.${c?.level}`)}</td>
+      <td class="num r b${c?.coins < 0 ? ' minus' : ''}">${cell(c?.coins)}</td>
+      <td class="num r">${cell(c?.earned)}</td>
+      <td class="num r">${cell(c?.spent)}</td>
+      <td class="num r">${cell(c?.rewards)}${c?.pending ? ` <span class="wait">대기 ${c.pending}</span>` : ''}</td>
+      <td class="num r muted">${cell(c?.silver ?? '')}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="9" class="muted">명단이 없어요</td></tr>';
+  const all = $('grant-allck');
+  all.checked = !!list.length && list.every((s) => grantPick.has(s.id));
+  all.indeterminate = !all.checked && list.some((s) => grantPick.has(s.id));
+  $('grant-count').textContent = `${grantPick.size}명`;
+  $('grant-go').disabled = !grantPick.size;
+  const rows = [...coinOf.values()];
+  const sum = (k) => rows.reduce((t, r) => t + (r[k] || 0), 0);
+  $('coins-sum').textContent = rows.length
+    ? `금화 = 받은 금화 − 뺀 금화 − 보상 신청(대기·승인) · ${clsName(grantClass)}반 합 ${sum('coins')} · 평균 ${Math.round(sum('coins') / rows.length)}${sum('pending') ? ` · 승인 기다리는 보상 ${sum('pending')}` : ''}`
+    : '';
 }
 
 $('grant-tabs').addEventListener('click', (e) => {
@@ -902,15 +949,18 @@ $('grant-tabs').addEventListener('click', (e) => {
   grantClass = Number(b.dataset.gcls);
   grantPick = new Set();
   renderGrant();
+  refreshCoins().catch((err) => toast(errMsg(err), 'error'));
 });
-$('grant-roll').addEventListener('click', (e) => {
+$('grant-roll').addEventListener('change', (e) => {
   const b = e.target.closest('[data-gsid]');
   if (!b) return;
-  grantPick.has(b.dataset.gsid) ? grantPick.delete(b.dataset.gsid) : grantPick.add(b.dataset.gsid);
+  if (b.checked) grantPick.add(b.dataset.gsid); else grantPick.delete(b.dataset.gsid);
   renderGrant();
 });
-$('grant-all').addEventListener('click', () => { grantPick = new Set(grantRoster().map((s) => s.id)); renderGrant(); });
-$('grant-none').addEventListener('click', () => { grantPick = new Set(); renderGrant(); });
+$('grant-allck').addEventListener('change', (e) => {
+  grantPick = e.target.checked ? new Set(grantRoster().map((s) => s.id)) : new Set();
+  renderGrant();
+});
 
 $('grant-form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -932,7 +982,7 @@ $('grant-form').addEventListener('submit', async (e) => {
     $('grant-coins').value = 0;
     $('grant-reason').value = '';
     renderGrant();
-    await refreshGrants();
+    await Promise.all([refreshGrants(), refreshCoins()]);
   } catch (err) {
     toast(errMsg(err), 'error');
   } finally {
@@ -943,82 +993,23 @@ $('grant-form').addEventListener('submit', async (e) => {
 async function refreshGrants() {
   const rows = await listGrants();
   $('grant-log').innerHTML = rows.length ? rows.map((g) => `
-    <div class="nick-row">
+    <div class="log-row">
+      <span class="num muted">${fmtDate(g.created_at)}</span>
       <b class="num">${clsName(g.student?.class_id ?? '?')}반 ${g.student?.number ?? '?'}번</b>
-      <span>${esc(g.reason)}</span>
-      <span class="old num">${fmtDate(g.created_at)}</span>
-      <span class="grant-amt num">${[signed(g.xp, 'XP'), signed(g.coins, '금화')].filter(Boolean).join(' · ')}</span>
+      <span class="grow">${esc(g.reason)}</span>
+      <span class="num b">${[signed(g.xp, 'XP'), signed(g.coins, '금화')].filter(Boolean).join(' · ')}</span>
     </div>`).join('') : '<p class="muted" style="margin:0">아직 직접 준 점수가 없어요</p>';
 }
 
-/* ---------- 금화 현황: 학생별 잔액·받은·쓴·보상 신청 (0이면 모든 반) ---------- */
-let coinClass = TEACHER_CLASSES[0];
-try { const v = localStorage.getItem('coinClass'); if (v !== null) coinClass = Number(v); } catch {}
-if (coinClass !== 0 && !TEACHER_CLASSES.includes(coinClass)) coinClass = TEACHER_CLASSES[0];
-let coinSort = 'number';
+/* ---------- 금화 현황: 학생별 점수 표의 금화·은화·레벨 칸 (get_coin_status) ---------- */
 let coinRows = [];
 
-$('coins-class').innerHTML = '<option value="0">모든 반</option>' + TEACHER_CLASSES.map((n) => `<option value="${n}">${clsName(n)}반</option>`).join('');
-$('coins-class').value = String(coinClass);
-$('coins-class').addEventListener('change', () => {
-  coinClass = Number($('coins-class').value);
-  try { localStorage.setItem('coinClass', String(coinClass)); } catch {}
-  coinRows = [];
-  renderCoins();
-  refreshCoins().catch((err) => toast(errMsg(err), 'error'));
-});
-$('coins-sort').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-sort]');
-  if (!b) return;
-  coinSort = b.dataset.sort;
-  for (const t of $('coins-sort').children) {
-    t.classList.toggle('on', t === b);
-    t.setAttribute('aria-selected', String(t === b));
-  }
-  renderCoins();
-});
-$('coins-refresh').addEventListener('click', () => refreshCoins().catch((err) => toast(errMsg(err), 'error')));
-
-function renderCoins() {
-  const all = coinClass === 0;
-  const rows = [...coinRows];
-  if (coinSort === 'coins') rows.sort((a, b) => b.coins - a.coins || a.class_id - b.class_id || a.number - b.number);
-  const sum = (k) => rows.reduce((t, r) => t + (r[k] || 0), 0);
-  const pending = sum('pending');
-  $('coins-count').textContent = rows.length ? `${rows.length}명` : '';
-  $('coins-sum').textContent = rows.length
-    ? `잔액 합 ${sum('coins')}금화 · 평균 ${Math.round(sum('coins') / rows.length)}금화${pending ? ` · 승인 기다리는 보상 ${pending}금화` : ''}`
-    : '';
-  if (!rows.length) {
-    $('coins-table').innerHTML = '<tbody><tr><td class="l muted">명단이 없어요</td></tr></tbody>';
-    return;
-  }
-  $('coins-table').innerHTML = `
-    <thead><tr>
-      ${all ? '<th class="l">반</th>' : ''}<th class="l">번호</th><th class="l">닉네임</th>
-      <th>잔액</th><th>받은 금화</th><th>뺀 금화</th><th>보상 신청</th><th>은화</th><th>레벨</th>
-    </tr></thead>
-    <tbody>${rows.map((r) => `<tr>
-      ${all ? `<td class="l">${clsName(r.class_id)}반</td>` : ''}<td class="l">${r.number}번</td>
-      <td class="l">${r.nickname ? esc(r.nickname) : '<span class="muted">닉네임 미정</span>'}</td>
-      <td class="bal${r.coins < 0 ? ' minus' : ''}">${r.coins}</td>
-      <td>${r.earned}</td><td>${r.spent}</td>
-      <td>${r.rewards}${r.pending ? `<span class="wait">대기 ${r.pending}</span>` : ''}</td>
-      <td>${r.silver ?? ''}</td>
-      <td>Lv.${r.level}</td>
-    </tr>`).join('')}</tbody>
-    <tfoot><tr>
-      <td class="l" colspan="${all ? 3 : 2}">합계</td>
-      <td class="bal">${sum('coins')}</td><td>${sum('earned')}</td><td>${sum('spent')}</td><td>${sum('rewards')}</td><td>${sum('silver')}</td><td></td>
-    </tr></tfoot>`;
-}
-
 async function refreshCoins() {
-  const cls = coinClass;
-  const rows = await getCoinStatus(cls || null);
-  if (cls !== coinClass) return;
+  const cls = grantClass;
+  const rows = await getCoinStatus(cls);
+  if (cls !== grantClass) return;
   coinRows = rows ?? [];
-  renderCoins();
+  renderGrant();
 }
 
 /* ---------- 포인트 규칙: 통과 기본·순위 보너스 (XP와 금화 따로) ---------- */
@@ -1634,17 +1625,19 @@ $('lesson-add').addEventListener('submit', async (e) => {
 });
 
 /* ---------- 반별 잠금 ---------- */
+// 반별 잠금: 학생 명단의 반 고르기 줄 오른쪽 스위치 (고른 반만)
 function renderLocks() {
-  $('lock-list').innerHTML = classes.map((c) => `
-    <div class="lock-row${c.locked ? ' is-locked' : ''}">
-      <b>${clsName(c.id)}반</b>
-      <span class="tag ${c.locked ? 'tag-warn' : 'tag-done'}">${c.locked ? '잠김' : '열림'}</span>
-      <button type="button" class="switch" role="switch" aria-checked="${!!c.locked}" data-lock="${c.id}" aria-label="${clsName(c.id)}반 잠금"><span></span></button>
-    </div>`).join('');
+  const c = classes.find((x) => x.id === rosterClass);
+  $('stu-lock').innerHTML = c ? `
+    <span id="stu-lock-l" class="${c.locked ? 'is-locked' : ''}">${c.locked ? '잠김' : '열림'}</span>
+    <button type="button" class="switch" role="switch" aria-checked="${!!c.locked}" data-lock="${c.id}" aria-labelledby="stu-lock-l" aria-describedby="stu-lock-d"><span></span></button>
+    <span class="sr" id="stu-lock-d">${clsName(c.id)}반 잠금</span>` : '';
+  $('stu-lock-note').classList.toggle('hidden', !c?.locked);
+  $('stu-lock-note').textContent = c?.locked ? `${clsName(c.id)}반 잠김 · 로그인 안 됨` : '';
   updateHub();
 }
 
-$('lock-list').addEventListener('click', async (e) => {
+$('stu-lock').addEventListener('click', async (e) => {
   const btn = e.target.closest('[data-lock]');
   if (!btn) return;
   const c = classes.find((x) => x.id === Number(btn.dataset.lock));
@@ -1683,22 +1676,26 @@ function updateHub() {
   syncSideBadges();
 }
 
+// 예전 주소(#roster 등)는 합친 화면으로 (2026-11-22 메뉴 정리)
+const ALIAS = { roster: 'students', nick: 'students', lock: 'students', grant: 'scores', coins: 'scores', 'moon-rpg': 'omok' };
 function route() {
-  const key = location.hash.slice(1);
+  let key = location.hash.slice(1);
+  if (ALIAS[key]) { history.replaceState(null, '', `#${ALIAS[key]}`); key = ALIAS[key]; }
   let open = null;
   document.querySelectorAll('[data-panel]').forEach((p) => {
-    const on = p.dataset.panel === key;
+    const on = !!key && (p.dataset.panel === key || (p.dataset.also || '').split(' ').includes(key));
     p.classList.toggle('hidden', !on);
-    if (on) open = p;
+    if (on && !open) open = p;
   });
-  // 첫 화면은 항목 카드 없이 가운데 3D 장면만. 항목은 사이드바로 연다
+  // 첫 화면은 가운데 3D 장면만. 화면은 위 메뉴로 연다
   $('hero').classList.toggle('hidden', !!open);
+  $('admin-body').classList.toggle('hidden', !open);
   document.body.classList.toggle('hero-on', !open);
   if (open) stopHero(); else startHero($('hero'));
   $('admin-h').textContent = open ? open.dataset.title : '관리';
   markSide(open ? key : '');
   scrollTo(0, 0);
-  if (key === 'nick') { refreshNicks().catch(() => {}); refreshNickAll().catch(() => {}); }
+  if (key === 'students') { refreshNicks().catch(() => {}); refreshNickAll().catch(() => {}); }
   loadPanel(key);
 }
 
@@ -1707,8 +1704,7 @@ function loadPanel(key) {
   if (key === 'lessons') refreshLessons().catch(() => {});
   if (key === 'buys') refreshBuys(true).catch(() => {});
   if (key === 'shopset') refreshShopSet().catch(() => {});
-  if (key === 'grant') { renderGrant(); refreshGrants().catch(() => {}); }
-  if (key === 'coins') refreshCoins().catch(() => {});
+  if (key === 'scores') { renderGrant(); refreshGrants().catch(() => {}); refreshCoins().catch(() => {}); }
   if (key === 'points') refreshPoints().catch(() => {});
   if (key === 'data') refreshArchive().catch(() => {});
   if (key === 'mats') refreshMats().catch(() => {});

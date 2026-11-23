@@ -1097,6 +1097,26 @@ $('points-form').querySelector('.pt-nav').addEventListener('click', (e) => {
   $('points-form').querySelectorAll('[data-pt]').forEach((x) => x.classList.toggle('on', x === b));
   $(b.dataset.pt)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 });
+// 내려가면 지금 보이는 칸 이름을 굵게
+{
+  const form = $('points-form');
+  const btns = [...form.querySelectorAll('.pt-nav [data-pt]')].filter((b) => $(b.dataset.pt));
+  let ticking = false;
+  let pinned = false; // 목록을 눌러 움직이는 동안은 누른 칸 그대로
+  form.querySelector('.pt-nav').addEventListener('click', (e) => { if (e.target.closest('[data-pt]')) pinned = true; });
+  addEventListener('scrollend', () => { pinned = false; });
+  const spy = () => {
+    ticking = false;
+    if (pinned || form.classList.contains('hidden') || !btns.length) return;
+    const line = 140;
+    let cur = btns[0];
+    for (const b of btns) if ($(b.dataset.pt).getBoundingClientRect().top <= line) cur = b;
+    const se = document.scrollingElement;
+    if (se.scrollTop > 0 && se.scrollTop + innerHeight >= se.scrollHeight - 4) cur = btns[btns.length - 1];
+    btns.forEach((x) => x.classList.toggle('on', x === cur));
+  };
+  addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(spy); } }, { passive: true });
+}
 $('points-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = e.currentTarget.querySelector('[type="submit"]');
